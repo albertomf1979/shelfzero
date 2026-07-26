@@ -63,6 +63,17 @@ export const api = {
   deleteList: (id: number) =>
     req<{ ok: true }>(`/api/lists/${id}`, { method: "DELETE" }),
 
+  createShare: (kind: "book" | "list", refId: number) =>
+    req<{ token: string; url: string }>("/api/shares", {
+      method: "POST",
+      body: JSON.stringify({ kind, refId }),
+    }),
+
+  getShare: (token: string) =>
+    req<{ kind: "book" | "list"; title: string | null; books: Book[] }>(
+      `/api/shares/${encodeURIComponent(token)}`
+    ),
+
   addToList: (listId: number, bookId: number) =>
     req<{ ok: true }>(`/api/lists/${listId}/books/${bookId}`, { method: "POST" }),
 

@@ -379,6 +379,100 @@ app.delete("/api/lists/:id/books/:bookId", async (c) => {
   return c.json({ ok: true });
 });
 
+// --- Compartir (FR11) ------------------------------------------------------
+
+/** Token aleatorio no adivinable para el enlace público. */
+function makeToken(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Crea (o reutiliza) un enlace público de solo lectura. */
+app.post("/api/shares", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as
+    | { kind?: "book" | "list"; refId?: number }
+    | null;
+
+  const kind = body?.kind;
+  const refId = Number(body?.refId);
+  if ((kind !== "book" && kind !== "list") || !Number.isFinite(refId)) {
+    return c.json({ error: "Parámetros no válidos" }, 400);
+  }
+
+  // Comprobar que existe lo que se quiere compartir.
+  const table = kind === "book" ? "books" : "lists";
+  const exists = await c.env.DB.prepare(
+    `SELECT id FROM ${table} WHERE id = ?`
+  )
+    .bind(refId)
+    .first();
+  if (!exists) return c.json({ error: "No encontrado" }, 404);
+
+  // Reutilizar el enlace si ya se compartió antes: así la URL es estable.
+  const previous = await c.env.DB.prepare(
+    "SELECT token FROM shares WHERE kind = ? AND ref_id = ?"
+  )
+    .bind(kind, refId)
+    .first<{ token: string }>();
+
+  const token = previous?.token ?? makeToken();
+  if (!previous) {
+    await c.env.DB.prepare(
+      "INSERT INTO shares (token, kind, ref_id, created_at) VALUES (?, ?, ?, ?)"
+    )
+      .bind(token, kind, refId, Date.now())
+      .run();
+  }
+
+  return c.json({ token, url: `${new URL(c.req.url).origin}/s/${token}` });
+});
+
+/** Contenido público de un enlace compartido (sin autenticación, solo lectura). */
+app.get("/api/shares/:token", async (c) => {
+  const token = c.req.param("token");
+  const share = await c.env.DB.prepare(
+    "SELECT * FROM shares WHERE token = ?"
+  )
+    .bind(token)
+    .first<{ kind: string; ref_id: number; expires_at: number | null }>();
+
+  if (!share) return c.json({ error: "Enlace no válido" }, 404);
+  if (share.expires_at && share.expires_at < Date.now()) {
+    return c.json({ error: "Este enlace ha caducado" }, 410);
+  }
+
+  if (share.kind === "book") {
+    const row = await c.env.DB.prepare(
+      `${BOOKS_SELECT} WHERE b.id = ? GROUP BY b.id`
+    )
+      .bind(share.ref_id)
+      .first();
+    if (!row) return c.json({ error: "No encontrado" }, 404);
+    return c.json({ kind: "book", books: [rowToBook(row)], title: null });
+  }
+
+  const list = await c.env.DB.prepare("SELECT name FROM lists WHERE id = ?")
+    .bind(share.ref_id)
+    .first<{ name: string }>();
+  if (!list) return c.json({ error: "No encontrado" }, 404);
+
+  const { results } = await c.env.DB.prepare(
+    `${BOOKS_SELECT}
+     WHERE b.id IN (SELECT book_id FROM book_lists WHERE list_id = ?)
+     GROUP BY b.id
+     ORDER BY b.title COLLATE NOCASE ASC`
+  )
+    .bind(share.ref_id)
+    .all();
+
+  return c.json({
+    kind: "list",
+    title: list.name,
+    books: (results ?? []).map(rowToBook),
+  });
+});
+
 // --- Fallback SPA ----------------------------------------------------------
 
 app.all("*", (c) => c.env.ASSETS.fetch(c.req.raw));

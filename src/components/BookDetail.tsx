@@ -10,6 +10,7 @@ type Props = {
   onToggleBought: (book: Book) => void;
   onDelete: (book: Book) => void;
   onToggleList: (book: Book, listId: number, add: boolean) => void;
+  onShare: (book: Book) => void;
 };
 
 export function BookDetail({
@@ -19,6 +20,7 @@ export function BookDetail({
   onToggleBought,
   onDelete,
   onToggleList,
+  onShare,
 }: Props) {
   useEffect(() => {
     if (!book) return;
@@ -154,6 +156,12 @@ export function BookDetail({
               {book.status === "bought"
                 ? "Marcar como pendiente"
                 : "Marcar como comprado"}
+            </button>
+            <button
+              onClick={() => onShare(book)}
+              className="rounded-full border border-ink/20 px-5 py-2.5 text-sm font-medium text-ink transition hover:bg-ink/5"
+            >
+              Compartir
             </button>
             <button
               onClick={() => onDelete(book)}

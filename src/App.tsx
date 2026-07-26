@@ -4,7 +4,13 @@ import type { Book, BookList, SortMode, ViewMode } from "./types";
 import { AddBookDialog } from "./components/AddBookDialog";
 import { BookDetail } from "./components/BookDetail";
 import { Shelf } from "./components/Shelf";
+import { SharedView } from "./components/SharedView";
+import { ShareSheet } from "./components/ShareSheet";
 import { Welcome } from "./components/Welcome";
+
+type ShareTarget =
+  | { kind: "book"; refId: number; label: string }
+  | { kind: "list"; refId: number; label: string };
 
 const SORT_LABELS: Record<SortMode, string> = {
   created: "Recientes",
@@ -14,6 +20,14 @@ const SORT_LABELS: Record<SortMode, string> = {
 };
 
 export default function App() {
+  // Ruta pública de solo lectura: /s/:token (no necesita cuenta).
+  const sharedToken = window.location.pathname.match(/^\/s\/([\w-]+)$/)?.[1];
+  if (sharedToken) return <SharedView token={sharedToken} />;
+
+  return <Shelves />;
+}
+
+function Shelves() {
   const [books, setBooks] = useState<Book[]>([]);
   const [lists, setLists] = useState<BookList[]>([]);
   const [sort, setSort] = useState<SortMode>(
@@ -29,6 +43,7 @@ export default function App() {
   const [showWelcome, setShowWelcome] = useState(
     () => localStorage.getItem("sz.seen") !== "1"
   );
+  const [share, setShare] = useState<ShareTarget | null>(null);
 
   useEffect(() => localStorage.setItem("sz.sort", sort), [sort]);
   useEffect(() => localStorage.setItem("sz.view", view), [view]);
@@ -222,6 +237,19 @@ export default function App() {
           >
             + Lista
           </button>
+
+          {/* Compartir la lista activa (FR11) */}
+          {activeList !== null && (
+            <button
+              onClick={() => {
+                const l = lists.find((x) => x.id === activeList);
+                if (l) setShare({ kind: "list", refId: l.id, label: l.name });
+              }}
+              className="ml-auto rounded-full border border-ink/15 px-4 py-1.5 text-sm text-ink-soft transition hover:bg-ink/5"
+            >
+              Compartir lista
+            </button>
+          )}
         </div>
 
         {/* Contenido */}
@@ -252,7 +280,11 @@ export default function App() {
         onToggleBought={toggleBought}
         onDelete={deleteBook}
         onToggleList={toggleList}
+        onShare={(b) =>
+          setShare({ kind: "book", refId: b.id, label: b.title })
+        }
       />
+      <ShareSheet target={share} onClose={() => setShare(null)} />
     </div>
   );
 }

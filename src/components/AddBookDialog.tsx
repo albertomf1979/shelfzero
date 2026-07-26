@@ -1,9 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import type { BookCandidate } from "../types";
 import { Cover } from "./Cover";
 
-type Mode = "search" | "isbn";
+// La librería de escaneo pesa ~450 kB: solo se descarga al abrir la cámara.
+const BarcodeScanner = lazy(() =>
+  import("./BarcodeScanner").then((m) => ({ default: m.BarcodeScanner }))
+);
+
+type Mode = "search" | "isbn" | "scan";
 
 type Props = {
   open: boolean;
@@ -32,10 +37,12 @@ export function AddBookDialog({ open, onClose, onAdded }: Props) {
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 50);
     } else {
+      // Al cerrar, volver al estado inicial (y apagar la cámara si estaba activa).
       setQuery("");
       setResults([]);
       setMessage(null);
       setLoading(false);
+      setMode("search");
     }
   }, [open]);
 
@@ -106,6 +113,31 @@ export function AddBookDialog({ open, onClose, onAdded }: Props) {
     }
   }
 
+  /** El escáner ha leído un ISBN: buscarlo directamente. */
+  const handleScanned = useCallback(async (isbn: string) => {
+    setMode("isbn");
+    setQuery(isbn);
+    setLoading(true);
+    setMessage(null);
+    setResults([]);
+    try {
+      const { book } = await api.lookupIsbn(isbn);
+      if (book) {
+        setResults([book]);
+      } else {
+        setMessage(
+          `Hemos leído el ISBN ${isbn}, pero no está en los catálogos. Prueba a buscarlo por título.`
+        );
+        setMode("search");
+        setQuery("");
+      }
+    } catch {
+      setMessage("No se ha podido consultar ese ISBN.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   /** Alta manual mínima cuando no hay coincidencias (FR3). */
   async function handleManualAdd() {
     const title = query.trim();
@@ -139,8 +171,16 @@ export function AddBookDialog({ open, onClose, onAdded }: Props) {
 
           <div className="mb-3 flex gap-1 rounded-full bg-ink/5 p-1 text-sm">
             <button
+              onClick={() => setMode("scan")}
+              className={`flex-1 rounded-full px-3 py-1.5 transition ${
+                mode === "scan" ? "bg-paper text-ink shadow-sm" : "text-ink-faint"
+              }`}
+            >
+              Escanear
+            </button>
+            <button
               onClick={() => setMode("search")}
-              className={`flex-1 rounded-full px-4 py-1.5 transition ${
+              className={`flex-1 rounded-full px-3 py-1.5 transition ${
                 mode === "search" ? "bg-paper text-ink shadow-sm" : "text-ink-faint"
               }`}
             >
@@ -148,7 +188,7 @@ export function AddBookDialog({ open, onClose, onAdded }: Props) {
             </button>
             <button
               onClick={() => setMode("isbn")}
-              className={`flex-1 rounded-full px-4 py-1.5 transition ${
+              className={`flex-1 rounded-full px-3 py-1.5 transition ${
                 mode === "isbn" ? "bg-paper text-ink shadow-sm" : "text-ink-faint"
               }`}
             >
@@ -156,31 +196,50 @@ export function AddBookDialog({ open, onClose, onAdded }: Props) {
             </button>
           </div>
 
-          <form onSubmit={handleSearch} className="flex gap-2">
-            <input
-              ref={inputRef}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              inputMode={mode === "isbn" ? "numeric" : "text"}
-              placeholder={
-                mode === "isbn"
-                  ? "978-84-9992-622-3"
-                  : "Título del libro o autor…"
-              }
-              className="flex-1 rounded-full border border-ink/15 bg-paper-2/50 px-5 py-3 text-base outline-none transition placeholder:text-ink-faint/70 focus:border-spine/40 focus:bg-paper"
-            />
-            <button
-              type="submit"
-              disabled={loading || !query.trim()}
-              className="rounded-full bg-spine px-6 py-3 font-medium text-paper transition hover:bg-spine-dark disabled:opacity-40"
-            >
-              {loading ? "Buscando…" : "Buscar"}
-            </button>
-          </form>
+          {mode !== "scan" && (
+            <form onSubmit={handleSearch} className="flex gap-2">
+              <input
+                ref={inputRef}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                inputMode={mode === "isbn" ? "numeric" : "text"}
+                placeholder={
+                  mode === "isbn"
+                    ? "978-84-9992-622-3"
+                    : "Título del libro o autor…"
+                }
+                className="flex-1 rounded-full border border-ink/15 bg-paper-2/50 px-5 py-3 text-base outline-none transition placeholder:text-ink-faint/70 focus:border-spine/40 focus:bg-paper"
+              />
+              <button
+                type="submit"
+                disabled={loading || !query.trim()}
+                className="rounded-full bg-spine px-6 py-3 font-medium text-paper transition hover:bg-spine-dark disabled:opacity-40"
+              >
+                {loading ? "Buscando…" : "Buscar"}
+              </button>
+            </form>
+          )}
         </div>
 
         {/* Resultados */}
         <div className="flex-1 overflow-y-auto p-5">
+          {mode === "scan" && (
+            <div className="mb-4">
+              <Suspense
+                fallback={
+                  <div className="flex aspect-[4/3] items-center justify-center rounded-xl bg-ink text-sm text-paper/80">
+                    Preparando la cámara…
+                  </div>
+                }
+              >
+                <BarcodeScanner
+                  onDetected={handleScanned}
+                  onCancel={() => setMode("isbn")}
+                />
+              </Suspense>
+            </div>
+          )}
+
           {message && (
             <div className="mb-4 rounded-xl border border-gold/30 bg-gold/10 p-4 text-sm text-ink-soft">
               <p>{message}</p>
@@ -250,9 +309,9 @@ export function AddBookDialog({ open, onClose, onAdded }: Props) {
             </>
           )}
 
-          {!loading && results.length === 0 && !message && (
+          {!loading && results.length === 0 && !message && mode !== "scan" && (
             <p className="py-10 text-center text-sm text-ink-faint">
-              Busca por título o introduce un ISBN para empezar.
+              Escanea el código de barras, busca por título o introduce un ISBN.
             </p>
           )}
         </div>
