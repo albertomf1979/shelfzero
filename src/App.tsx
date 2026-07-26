@@ -156,14 +156,14 @@ function Shelves() {
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
         {/* Controles */}
-        <div className="mb-6 flex flex-wrap items-center gap-3">
-          {/* Orden (FR6) */}
-          <div className="flex gap-1 rounded-full bg-ink/5 p-1 text-sm">
+        <div className="mb-6 flex items-center gap-2">
+          {/* Orden (FR6) — se desliza en horizontal si no cabe */}
+          <div className="-mx-1 flex min-w-0 flex-1 gap-1 overflow-x-auto rounded-full bg-ink/5 p-1 text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {(Object.keys(SORT_LABELS) as SortMode[]).map((s) => (
               <button
                 key={s}
                 onClick={() => setSort(s)}
-                className={`rounded-full px-3.5 py-1.5 transition ${
+                className={`shrink-0 rounded-full px-3.5 py-1.5 transition ${
                   sort === s ? "bg-paper text-ink shadow-sm" : "text-ink-faint hover:text-ink"
                 }`}
               >
@@ -173,7 +173,7 @@ function Shelves() {
           </div>
 
           {/* Vistas (FR13) */}
-          <div className="ml-auto flex gap-1 rounded-full bg-ink/5 p-1">
+          <div className="flex shrink-0 gap-1 rounded-full bg-ink/5 p-1">
             <button
               onClick={() => setView("shelf")}
               className={`rounded-full p-2 transition ${

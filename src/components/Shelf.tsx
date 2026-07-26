@@ -116,9 +116,9 @@ function ListView({ books, onOpen, onToggleBought }: Omit<Props, "view" | "sort"
       {books.map((book) => (
         <li
           key={book.id}
-          className="flex items-center gap-4 p-3 transition hover:bg-paper-2/50 sm:p-4"
+          className="flex gap-4 p-3 transition hover:bg-paper-2/50 sm:p-4"
         >
-          <button onClick={() => onOpen(book)} className="shrink-0">
+          <button onClick={() => onOpen(book)} className="shrink-0 self-start">
             <Cover
               url={book.coverUrl}
               title={book.title}
@@ -129,47 +129,52 @@ function ListView({ books, onOpen, onToggleBought }: Omit<Props, "view" | "sort"
             />
           </button>
 
-          <button
-            onClick={() => onOpen(book)}
-            className="min-w-0 flex-1 text-left"
-          >
-            <h3 className="font-display text-base leading-snug line-clamp-1">
-              {book.title}
-            </h3>
-            <p className="mt-0.5 text-sm text-ink-soft line-clamp-1">
-              {book.authors.join(", ") || "Autor desconocido"}
-            </p>
-            <p className="mt-1 text-xs text-ink-faint line-clamp-1">
-              {[book.subjects[0], book.publishedYear].filter(Boolean).join(" · ")}
-            </p>
-          </button>
-
-          <div className="flex shrink-0 items-center gap-1.5">
-            <a
-              href={googleBuyUrl(book)}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="rounded-full border border-ink/15 px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-ink/5"
-              title="Buscar dónde comprarlo en Google"
-            >
-              Buscar
-            </a>
+          {/* En móvil las acciones caen debajo; en pantalla ancha van al lado. */}
+          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
             <button
-              onClick={() => onToggleBought(book)}
-              className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
-                book.status === "bought"
-                  ? "bg-ink/10 text-ink-soft hover:bg-ink/15"
-                  : "border border-ink/15 text-ink hover:bg-ink/5"
-              }`}
-              title={
-                book.status === "bought"
-                  ? "Marcar como pendiente"
-                  : "Marcar como comprado"
-              }
+              onClick={() => onOpen(book)}
+              className="min-w-0 flex-1 text-left"
             >
-              {book.status === "bought" ? "✓ Comprado" : "Comprado"}
+              <h3 className="font-display text-base leading-snug line-clamp-2 sm:line-clamp-1">
+                {book.title}
+              </h3>
+              <p className="mt-0.5 text-sm text-ink-soft line-clamp-1">
+                {book.authors.join(", ") || "Autor desconocido"}
+              </p>
+              <p className="mt-1 text-xs text-ink-faint line-clamp-1">
+                {[book.subjects[0], book.publishedYear]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
             </button>
+
+            <div className="flex shrink-0 items-center gap-1.5">
+              <a
+                href={googleBuyUrl(book)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="rounded-full border border-ink/15 px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-ink/5"
+                title="Buscar dónde comprarlo en Google"
+              >
+                Buscar
+              </a>
+              <button
+                onClick={() => onToggleBought(book)}
+                className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                  book.status === "bought"
+                    ? "bg-ink/10 text-ink-soft hover:bg-ink/15"
+                    : "border border-ink/15 text-ink hover:bg-ink/5"
+                }`}
+                title={
+                  book.status === "bought"
+                    ? "Marcar como pendiente"
+                    : "Marcar como comprado"
+                }
+              >
+                {book.status === "bought" ? "✓ Comprado" : "Comprado"}
+              </button>
+            </div>
           </div>
         </li>
       ))}
