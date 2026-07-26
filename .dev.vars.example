@@ -1,0 +1,6 @@
+# Copia este archivo como `.dev.vars` para desarrollo local.
+# (No subas `.dev.vars` al repositorio — ya está en .gitignore.)
+
+# Clave opcional de Google Books API. Funciona sin clave a menor cuota.
+# Consíguela en https://console.cloud.google.com/ (habilita "Books API").
+GOOGLE_BOOKS_API_KEY=
