@@ -84,13 +84,13 @@ export function BarcodeScanner({ onDetected, onCancel }: Props) {
 
         {(starting || error) && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-ink/80 p-6 text-center">
-            <p className="text-sm text-paper/90">
+            <p className="text-body text-paper/90">
               {error ?? "Abriendo la cámara…"}
             </p>
             {error && (
               <button
                 onClick={onCancel}
-                className="rounded-full bg-paper px-5 py-2 text-sm font-medium text-ink"
+                className="rounded-full bg-paper px-5 py-2 text-body font-medium text-ink"
               >
                 Introducir ISBN a mano
               </button>
@@ -101,12 +101,12 @@ export function BarcodeScanner({ onDetected, onCancel }: Props) {
 
       {!error && (
         <div className="flex items-center justify-between gap-3 px-4 py-3">
-          <p className="text-sm text-paper/80">
+          <p className="text-body text-paper/80">
             Enfoca el código de barras de la contraportada
           </p>
           <button
             onClick={onCancel}
-            className="shrink-0 rounded-full border border-paper/30 px-4 py-1.5 text-sm text-paper transition hover:bg-paper/10"
+            className="shrink-0 rounded-full border border-paper/30 px-4 py-1.5 text-body text-paper transition hover:bg-paper/10"
           >
             Cancelar
           </button>

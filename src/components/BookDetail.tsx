@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import type { Book, BookList } from "../types";
 import { googleBuyUrl } from "../api";
+import { cleanSubjects } from "../lib/subjects";
 import { Cover } from "./Cover";
 
 type Props = {
@@ -36,6 +37,7 @@ export function BookDetail({
     book.publishedYear,
     book.isbn13 ? `ISBN ${book.isbn13}` : book.isbn10 ? `ISBN ${book.isbn10}` : null,
   ].filter(Boolean);
+  const subjects = cleanSubjects(book.subjects, 4);
 
   return (
     <div
@@ -45,7 +47,7 @@ export function BookDetail({
       aria-modal="true"
       aria-label={`Ficha de ${book.title}`}
     >
-      <div className="max-h-[88vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-paper shadow-2xl">
+      <div className="max-h-[88vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-paper shadow-sheet">
         <div className="relative p-6 sm:p-8">
           <button
             onClick={onClose}
@@ -58,20 +60,34 @@ export function BookDetail({
           </button>
 
           <div className="flex flex-col gap-6 sm:flex-row sm:gap-8">
-            <Cover
-              url={book.coverUrl}
-              title={book.title}
-              authors={book.authors}
-              className="mx-auto h-56 w-38 shrink-0 shadow-xl shadow-ink/25 sm:mx-0 sm:h-64 sm:w-44"
-            />
-
-            <div className="min-w-0 flex-1">
+            <div className="relative mx-auto shrink-0 sm:mx-0">
+              <Cover
+                url={book.coverUrl}
+                title={book.title}
+                authors={book.authors}
+                className={`h-56 w-[9.5rem] rounded-sm shadow-cover-lift sm:h-64 sm:w-44 ${
+                  book.status === "bought" ? "saturate-[.55] opacity-90" : ""
+                }`}
+                loading="eager"
+              />
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-y-0 left-0 w-[3px] rounded-l-sm bg-gradient-to-r from-ink/35 via-ink/10 to-transparent"
+              />
               {book.status === "bought" && (
-                <span className="mb-2 inline-block rounded-full bg-ink/10 px-3 py-1 text-[0.7rem] font-medium uppercase tracking-wide text-ink-soft">
-                  ✓ Comprado
+                <span
+                  className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-[2px] border border-gold-deep/70 bg-paper/70 px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-gold-deep mix-blend-multiply"
+                  style={{
+                    animation: "sz-stamp var(--dur-slow) var(--ease-paper) both",
+                    transform: "rotate(-6deg)",
+                  }}
+                >
+                  Adquirido
                 </span>
               )}
+            </div>
 
+            <div className="min-w-0 flex-1">
               <h1 className="font-display text-2xl leading-tight sm:text-3xl">
                 {book.title}
               </h1>
@@ -80,15 +96,16 @@ export function BookDetail({
               </p>
 
               {meta.length > 0 && (
-                <p className="mt-3 text-sm text-ink-faint">{meta.join(" · ")}</p>
+                <p className="mt-3 text-body text-ink-faint">{meta.join(" · ")}</p>
               )}
 
-              {book.subjects.length > 0 && (
+              {/* Temáticas limpias: sin ruido de catálogo y en español si se conoce */}
+              {subjects.length > 0 && (
                 <div className="mt-4 flex flex-wrap gap-1.5">
-                  {book.subjects.slice(0, 6).map((s) => (
+                  {subjects.map((s) => (
                     <span
                       key={s}
-                      className="rounded-full bg-paper-3/70 px-2.5 py-1 text-xs text-ink-soft"
+                      className="rounded-full bg-paper-3 px-2.5 py-1 text-meta text-ink-soft"
                     >
                       {s}
                     </span>
@@ -100,7 +117,7 @@ export function BookDetail({
 
           {book.description && (
             <div className="mt-7">
-              <h2 className="mb-2 text-xs font-medium uppercase tracking-wider text-ink-faint">
+              <h2 className="mb-2 text-meta font-medium uppercase tracking-wider text-ink-faint">
                 Resumen
               </h2>
               <p className="whitespace-pre-line text-[0.95rem] leading-relaxed text-ink-soft">
@@ -114,7 +131,7 @@ export function BookDetail({
           {/* Listas */}
           {lists.length > 0 && (
             <div className="mt-7">
-              <h2 className="mb-2 text-xs font-medium uppercase tracking-wider text-ink-faint">
+              <h2 className="mb-2 text-meta font-medium uppercase tracking-wider text-ink-faint">
                 Listas
               </h2>
               <div className="flex flex-wrap gap-2">
@@ -124,7 +141,7 @@ export function BookDetail({
                     <button
                       key={l.id}
                       onClick={() => onToggleList(book, l.id, !active)}
-                      className={`rounded-full px-3 py-1.5 text-sm transition ${
+                      className={`rounded-full px-3 py-1.5 text-body transition ${
                         active
                           ? "bg-spine text-paper"
                           : "border border-ink/15 text-ink-soft hover:bg-ink/5"
@@ -145,13 +162,13 @@ export function BookDetail({
               href={googleBuyUrl(book)}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-full bg-spine px-6 py-2.5 text-sm font-medium text-paper transition hover:bg-spine-dark"
+              className="rounded-full bg-spine px-6 py-2.5 text-body font-medium text-paper transition hover:bg-spine-dark"
             >
               Buscar dónde comprarlo ↗
             </a>
             <button
               onClick={() => onToggleBought(book)}
-              className="rounded-full border border-ink/20 px-5 py-2.5 text-sm font-medium text-ink transition hover:bg-ink/5"
+              className="rounded-full border border-ink/20 px-5 py-2.5 text-body font-medium text-ink transition hover:bg-ink/5"
             >
               {book.status === "bought"
                 ? "Marcar como pendiente"
@@ -159,13 +176,13 @@ export function BookDetail({
             </button>
             <button
               onClick={() => onShare(book)}
-              className="rounded-full border border-ink/20 px-5 py-2.5 text-sm font-medium text-ink transition hover:bg-ink/5"
+              className="rounded-full border border-ink/20 px-5 py-2.5 text-body font-medium text-ink transition hover:bg-ink/5"
             >
               Compartir
             </button>
             <button
               onClick={() => onDelete(book)}
-              className="ml-auto rounded-full px-4 py-2.5 text-sm font-medium text-ink-faint transition hover:bg-spine/10 hover:text-spine"
+              className="ml-auto rounded-full px-4 py-2.5 text-body font-medium text-ink-faint transition hover:bg-spine/10 hover:text-spine"
             >
               Eliminar
             </button>

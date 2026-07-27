@@ -3,10 +3,15 @@ import { api } from "./api";
 import type { Book, BookList, SortMode, ViewMode } from "./types";
 import { AddBookDialog } from "./components/AddBookDialog";
 import { BookDetail } from "./components/BookDetail";
+import { BookMenu } from "./components/BookMenu";
+import { ConfirmDialog } from "./components/ConfirmDialog";
+import { PromptDialog } from "./components/PromptDialog";
 import { Shelf } from "./components/Shelf";
 import { SharedView } from "./components/SharedView";
 import { ShareSheet } from "./components/ShareSheet";
+import { useToast } from "./components/Toast";
 import { Welcome } from "./components/Welcome";
+import { IconBarcode, IconGrid, IconList, IconPlus } from "./components/icons";
 
 type ShareTarget =
   | { kind: "book"; refId: number; label: string }
@@ -39,11 +44,16 @@ function Shelves() {
   const [activeList, setActiveList] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
+  const [addMode, setAddMode] = useState<"scan" | "search" | "isbn">("search");
   const [detail, setDetail] = useState<Book | null>(null);
   const [showWelcome, setShowWelcome] = useState(
     () => localStorage.getItem("sz.seen") !== "1"
   );
   const [share, setShare] = useState<ShareTarget | null>(null);
+  const [toDelete, setToDelete] = useState<Book | null>(null);
+  const [newListOpen, setNewListOpen] = useState(false);
+  const [menuBook, setMenuBook] = useState<Book | null>(null);
+  const toast = useToast();
 
   useEffect(() => localStorage.setItem("sz.sort", sort), [sort]);
   useEffect(() => localStorage.setItem("sz.view", view), [view]);
@@ -74,14 +84,21 @@ function Shelves() {
       prev.map((b) => (b.id === book.id ? { ...b, status: next } : b))
     );
     setDetail((d) => (d?.id === book.id ? { ...d, status: next } : d));
+    toast(
+      next === "bought"
+        ? `«${book.title}» marcado como adquirido`
+        : `«${book.title}» vuelve a la lista de deseos`
+    );
     await api.updateBook(book.id, { status: next }).catch(load);
   }
 
+  /** El borrado es definitivo (la API no tiene papelera), de ahí la confirmación. */
   async function deleteBook(book: Book) {
-    if (!confirm(`¿Eliminar «${book.title}» del estante?`)) return;
     setBooks((prev) => prev.filter((b) => b.id !== book.id));
     setDetail(null);
+    setToDelete(null);
     await api.deleteBook(book.id).catch(load);
+    toast(`«${book.title}» ya no está en el estante`);
     load();
   }
 
@@ -99,11 +116,17 @@ function Shelves() {
     load();
   }
 
-  async function createList() {
-    const name = prompt("Nombre de la nueva lista (p. ej. Ciencia ficción):");
-    if (!name?.trim()) return;
-    await api.addList(name.trim());
+  async function createList(name: string, color: string | null) {
+    setNewListOpen(false);
+    await api.addList(name, color);
+    toast(`Lista «${name}» creada`);
     load();
+  }
+
+  /** Abre el diálogo de alta directamente en el modo pedido (FR: captura rápida). */
+  function openAdd(mode: "scan" | "search" | "isbn") {
+    setAddMode(mode);
+    setAddOpen(true);
   }
 
   function dismissWelcome(openAdd: boolean) {
@@ -141,15 +164,16 @@ function Shelves() {
             <span className="font-display text-xl">ShelfZero</span>
           </button>
 
-          <span className="ml-1 hidden text-sm text-ink-faint sm:inline">
+          <span className="ml-1 hidden text-body text-ink-faint sm:inline">
             {pending} por comprar
           </span>
 
           <button
-            onClick={() => setAddOpen(true)}
-            className="ml-auto rounded-full bg-spine px-5 py-2 text-sm font-medium text-paper shadow-sm transition hover:bg-spine-dark active:scale-95"
+            onClick={() => openAdd("search")}
+            className="ml-auto inline-flex min-h-11 items-center gap-1.5 rounded-full bg-spine px-5 text-body font-medium text-paper shadow-raise transition hover:bg-spine-dark active:scale-95"
           >
-            + Añadir
+            <IconPlus className="size-4" />
+            Añadir
           </button>
         </div>
       </header>
@@ -158,7 +182,7 @@ function Shelves() {
         {/* Controles */}
         <div className="mb-6 flex items-center gap-2">
           {/* Orden (FR6) — se desliza en horizontal si no cabe */}
-          <div className="-mx-1 flex min-w-0 flex-1 gap-1 overflow-x-auto rounded-full bg-ink/5 p-1 text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="-mx-1 flex min-w-0 flex-1 gap-1 overflow-x-auto rounded-full bg-ink/5 p-1 text-body [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {(Object.keys(SORT_LABELS) as SortMode[]).map((s) => (
               <button
                 key={s}
@@ -182,12 +206,7 @@ function Shelves() {
               aria-label="Vista estantería"
               title="Vista estantería"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="3" width="7" height="7" rx="1" />
-                <rect x="14" y="3" width="7" height="7" rx="1" />
-                <rect x="3" y="14" width="7" height="7" rx="1" />
-                <rect x="14" y="14" width="7" height="7" rx="1" />
-              </svg>
+              <IconGrid className="size-5" />
             </button>
             <button
               onClick={() => setView("list")}
@@ -197,9 +216,7 @@ function Shelves() {
               aria-label="Vista lista"
               title="Vista lista"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
-              </svg>
+              <IconList className="size-5" />
             </button>
           </div>
         </div>
@@ -208,7 +225,7 @@ function Shelves() {
         <div className="mb-7 flex flex-wrap items-center gap-2">
           <button
             onClick={() => setActiveList(null)}
-            className={`rounded-full px-3.5 py-1.5 text-sm transition ${
+            className={`rounded-full px-3.5 py-1.5 text-body transition ${
               activeList === null
                 ? "bg-ink text-paper"
                 : "border border-ink/15 text-ink-soft hover:bg-ink/5"
@@ -220,7 +237,7 @@ function Shelves() {
             <button
               key={l.id}
               onClick={() => setActiveList(l.id)}
-              className={`rounded-full px-3.5 py-1.5 text-sm transition ${
+              className={`rounded-full px-3.5 py-1.5 text-body transition ${
                 activeList === l.id
                   ? "bg-ink text-paper"
                   : "border border-ink/15 text-ink-soft hover:bg-ink/5"
@@ -231,8 +248,8 @@ function Shelves() {
             </button>
           ))}
           <button
-            onClick={createList}
-            className="rounded-full px-3 py-1.5 text-sm text-ink-faint transition hover:text-ink"
+            onClick={() => setNewListOpen(true)}
+            className="rounded-full px-3 py-1.5 text-body text-ink-faint transition hover:text-ink"
             title="Crear una lista"
           >
             + Lista
@@ -245,7 +262,7 @@ function Shelves() {
                 const l = lists.find((x) => x.id === activeList);
                 if (l) setShare({ kind: "list", refId: l.id, label: l.name });
               }}
-              className="ml-auto rounded-full border border-ink/15 px-4 py-1.5 text-sm text-ink-soft transition hover:bg-ink/5"
+              className="ml-auto rounded-full border border-ink/15 px-4 py-1.5 text-body text-ink-soft transition hover:bg-ink/5"
             >
               Compartir lista
             </button>
@@ -254,65 +271,161 @@ function Shelves() {
 
         {/* Contenido */}
         {loading ? (
-          <p className="py-20 text-center text-sm text-ink-faint">Cargando…</p>
+          <p className="py-20 text-center text-body text-ink-faint">Cargando…</p>
         ) : books.length === 0 ? (
-          <EmptyState onAdd={() => setAddOpen(true)} filtered={activeList !== null} />
+          <EmptyState
+            onScan={() => openAdd("scan")}
+            onSearch={() => openAdd("search")}
+            onClearFilter={() => setActiveList(null)}
+            filtered={activeList !== null}
+          />
         ) : (
           <Shelf
             books={books}
             view={view}
             sort={sort}
             onOpen={setDetail}
-            onToggleBought={toggleBought}
+            onMenu={setMenuBook}
           />
         )}
       </main>
 
+      {/* Escanear en un solo toque: el gesto principal en la librería.
+          Se oculta en el estado vacío, que ya ofrece el botón. */}
+      {books.length > 0 && (
+        <button
+          onClick={() => openAdd("scan")}
+          aria-label="Escanear el código de barras de un libro"
+          className="fixed right-5 z-40 inline-flex size-14 items-center justify-center rounded-full bg-spine text-paper shadow-raise transition hover:bg-spine-dark active:scale-95 sm:hidden"
+          style={{ bottom: "max(1.25rem, calc(env(safe-area-inset-bottom) + 0.75rem))" }}
+        >
+          <IconBarcode className="size-7" />
+        </button>
+      )}
+
       <AddBookDialog
         open={addOpen}
+        initialMode={addMode}
         onClose={() => setAddOpen(false)}
-        onAdded={load}
+        onAdded={(title) => {
+          toast(`«${title}» guardado en el estante`);
+          load();
+        }}
       />
       <BookDetail
         book={detail}
         lists={lists}
         onClose={() => setDetail(null)}
         onToggleBought={toggleBought}
-        onDelete={deleteBook}
+        onDelete={setToDelete}
         onToggleList={toggleList}
         onShare={(b) =>
           setShare({ kind: "book", refId: b.id, label: b.title })
         }
       />
       <ShareSheet target={share} onClose={() => setShare(null)} />
+
+      <BookMenu
+        book={menuBook}
+        onClose={() => setMenuBook(null)}
+        onOpenDetail={setDetail}
+        onToggleBought={toggleBought}
+        onShare={(b) => setShare({ kind: "book", refId: b.id, label: b.title })}
+        onDelete={setToDelete}
+      />
+
+      <ConfirmDialog
+        open={!!toDelete}
+        tone="danger"
+        title={`¿Quitar «${toDelete?.title ?? ""}» del estante?`}
+        description="No se puede deshacer."
+        confirmLabel="Quitar"
+        onConfirm={() => toDelete && deleteBook(toDelete)}
+        onCancel={() => setToDelete(null)}
+      />
+
+      <PromptDialog
+        open={newListOpen}
+        title="Nueva lista"
+        label="Nombre de la lista"
+        placeholder="Ciencia ficción"
+        confirmLabel="Crear"
+        withColor
+        validate={(v) =>
+          lists.some((l) => l.name.toLowerCase() === v.toLowerCase())
+            ? "Ya tienes una lista con ese nombre."
+            : null
+        }
+        onSubmit={createList}
+        onCancel={() => setNewListOpen(false)}
+      />
     </div>
   );
 }
 
-function EmptyState({ onAdd, filtered }: { onAdd: () => void; filtered: boolean }) {
-  return (
-    <div className="py-24 text-center">
-      <div className="mx-auto mb-5 flex h-16 w-12 items-end justify-center gap-1">
-        <span className="h-10 w-2.5 rounded-sm bg-ink/15" />
-        <span className="h-14 w-2.5 rounded-sm bg-ink/20" />
-        <span className="h-8 w-2.5 rounded-sm bg-ink/12" />
-      </div>
-      <p className="font-display text-xl text-ink-soft">
-        {filtered ? "Esta lista está vacía" : "Tu estante está vacío"}
-      </p>
-      <p className="mx-auto mt-2 max-w-xs text-sm text-ink-faint">
-        {filtered
-          ? "Añade libros a esta lista desde su ficha."
-          : "Busca un libro por título o ISBN y guárdalo para no perderlo de vista."}
-      </p>
-      {!filtered && (
+function EmptyState({
+  onScan,
+  onSearch,
+  onClearFilter,
+  filtered,
+}: {
+  onScan: () => void;
+  onSearch: () => void;
+  onClearFilter: () => void;
+  filtered: boolean;
+}) {
+  if (filtered) {
+    return (
+      <div className="mx-auto max-w-[20rem] py-12 text-center">
+        <h2 className="font-display text-2xl font-semibold">
+          Esta lista está vacía
+        </h2>
+        <p className="mt-2 text-lede text-ink-soft">
+          Añade libros a esta lista desde su ficha.
+        </p>
         <button
-          onClick={onAdd}
-          className="mt-6 rounded-full bg-spine px-6 py-2.5 text-sm font-medium text-paper transition hover:bg-spine-dark"
+          onClick={onClearFilter}
+          className="mt-6 inline-flex min-h-11 items-center justify-center rounded-full border border-rule-strong px-5 text-body font-medium text-ink transition hover:bg-paper-2"
         >
-          Añadir un libro
+          Ver todo el estante
         </button>
-      )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-[20rem] py-12 text-center">
+      {/* Una balda vacía: la promesa visual de lo que va a haber aquí */}
+      <div aria-hidden="true" className="mb-6">
+        <div className="h-20 rounded-t-sm bg-paper-2/70" />
+        <div
+          className="h-2 bg-gradient-to-b from-wood to-wood-dark"
+          style={{ boxShadow: "inset 0 1px 0 rgb(255 255 255 / 0.18)" }}
+        />
+        <div className="h-1 bg-wood-dark/45" />
+      </div>
+
+      <h2 className="font-display text-2xl font-semibold">
+        El estante está vacío
+      </h2>
+      <p className="mt-2 text-lede text-ink-soft">
+        Sin prisa, sin olvidos. Escanea el primer libro que te apetezca.
+      </p>
+
+      <div className="mt-6 flex flex-col gap-3">
+        <button
+          onClick={onScan}
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-spine px-5 text-body font-medium text-paper shadow-raise transition hover:bg-spine-dark active:scale-[0.98]"
+        >
+          Escanear un libro
+        </button>
+        <button
+          onClick={onSearch}
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-rule-strong px-5 text-body font-medium text-ink transition hover:bg-paper-2"
+        >
+          Buscar por título
+        </button>
+      </div>
     </div>
   );
 }

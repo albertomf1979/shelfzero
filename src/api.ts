@@ -54,10 +54,10 @@ export const api = {
 
   getLists: () => req<{ lists: BookList[] }>("/api/lists"),
 
-  addList: (name: string) =>
+  addList: (name: string, color?: string | null) =>
     req<{ list: BookList }>("/api/lists", {
       method: "POST",
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, color }),
     }),
 
   deleteList: (id: number) =>

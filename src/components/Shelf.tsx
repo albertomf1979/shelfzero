@@ -1,17 +1,22 @@
+import { useEffect, useState } from "react";
 import type { Book, SortMode, ViewMode } from "../types";
-import { googleBuyUrl } from "../api";
+import { cleanSubjects } from "../lib/subjects";
 import { Cover } from "./Cover";
+import { IconChevronDown, IconMore } from "./icons";
 
 type Props = {
   books: Book[];
   view: ViewMode;
   sort: SortMode;
   onOpen: (book: Book) => void;
-  onToggleBought: (book: Book) => void;
+  onMenu: (book: Book) => void;
 };
 
 /** Agrupa por autor o temática cuando el orden lo pide (FR6). */
-function group(books: Book[], sort: SortMode): { label: string | null; books: Book[] }[] {
+function group(
+  books: Book[],
+  sort: SortMode
+): { label: string | null; books: Book[] }[] {
   if (sort !== "author" && sort !== "subject") {
     return [{ label: null, books }];
   }
@@ -20,14 +25,14 @@ function group(books: Book[], sort: SortMode): { label: string | null; books: Bo
     const key =
       sort === "author"
         ? b.authors[0] ?? "Sin autor"
-        : b.subjects[0] ?? "Sin temática";
+        : cleanSubjects(b.subjects)[0] ?? "Sin temática";
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push(b);
   }
   return [...groups.entries()].map(([label, books]) => ({ label, books }));
 }
 
-export function Shelf({ books, view, sort, onOpen, onToggleBought }: Props) {
+export function Shelf({ books, view, sort, onOpen, onMenu }: Props) {
   const groups = group(books, sort);
 
   return (
@@ -37,23 +42,17 @@ export function Shelf({ books, view, sort, onOpen, onToggleBought }: Props) {
           {label && (
             <h2 className="mb-4 flex items-center gap-3 font-display text-lg text-ink-soft">
               <span>{label}</span>
-              <span className="h-px flex-1 bg-ink/10" />
-              <span className="text-sm text-ink-faint">{groupBooks.length}</span>
+              <span className="h-px flex-1 bg-rule/50" />
+              <span className="text-meta tabular-nums text-ink-faint">
+                {groupBooks.length}
+              </span>
             </h2>
           )}
 
           {view === "shelf" ? (
-            <ShelfView
-              books={groupBooks}
-              onOpen={onOpen}
-              onToggleBought={onToggleBought}
-            />
+            <ShelfView books={groupBooks} onOpen={onOpen} />
           ) : (
-            <ListView
-              books={groupBooks}
-              onOpen={onOpen}
-              onToggleBought={onToggleBought}
-            />
+            <ListView books={groupBooks} onOpen={onOpen} onMenu={onMenu} />
           )}
         </section>
       ))}
@@ -61,123 +60,289 @@ export function Shelf({ books, view, sort, onOpen, onToggleBought }: Props) {
   );
 }
 
-/** Vista estantería: galería de portadas sobre baldas de madera. */
-function ShelfView({
-  books,
+// --- Vista estantería ------------------------------------------------------
+
+/** Columnas según el ancho: la balda se dibuja por fila, así que hay que saberlas. */
+function useColumns() {
+  const [cols, setCols] = useState(3);
+  useEffect(() => {
+    const calc = () => {
+      const w = window.innerWidth;
+      setCols(w < 340 ? 2 : w < 640 ? 3 : w < 768 ? 4 : w < 1024 ? 5 : 6);
+    };
+    calc();
+    window.addEventListener("resize", calc);
+    return () => window.removeEventListener("resize", calc);
+  }, []);
+  return cols;
+}
+
+function chunk<T>(xs: T[], n: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < xs.length; i += n) out.push(xs.slice(i, i + n));
+  return out;
+}
+
+/**
+ * Una fila de libros apoyados sobre una balda continua.
+ * Alinear al canto inferior es lo que absorbe la disparidad de portadas.
+ */
+function ShelfRow({
+  row,
+  cols,
+  offset,
   onOpen,
-  onToggleBought,
-}: Omit<Props, "view" | "sort">) {
-  // Repartimos en baldas de 6 (se adapta con el grid en móvil).
+  tone = "light",
+}: {
+  row: Book[];
+  cols: number;
+  offset: number;
+  onOpen: (b: Book) => void;
+  tone?: "light" | "dark";
+}) {
   return (
-    <div className="grid grid-cols-3 gap-x-4 gap-y-8 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
-      {books.map((book) => (
-        <div key={book.id} className="group flex flex-col">
-          <button
-            onClick={() => onOpen(book)}
-            className="relative block w-full text-left transition duration-200 hover:-translate-y-1.5"
-            aria-label={`Abrir ficha de ${book.title}`}
-          >
-            <Cover
-              url={book.coverUrl}
-              title={book.title}
-              authors={book.authors}
-              className={`aspect-[2/3] w-full shadow-md shadow-ink/20 transition group-hover:shadow-xl group-hover:shadow-ink/25 ${
-                book.status === "bought" ? "opacity-60 saturate-50" : ""
-              }`}
-            />
-            {book.status === "bought" && (
-              <span className="absolute right-1.5 top-1.5 rounded-full bg-ink/85 px-2 py-0.5 text-[0.6rem] font-medium uppercase tracking-wide text-paper">
-                Comprado
-              </span>
-            )}
-          </button>
+    <li className="list-none">
+      <div className="flex items-end gap-3 sm:gap-4">
+        {row.map((b, i) => (
+          <BookOnShelf
+            key={b.id}
+            book={b}
+            index={offset + i}
+            onOpen={onOpen}
+          />
+        ))}
+        {/* Rellenos para que la balda llegue de lado a lado */}
+        {Array.from({ length: cols - row.length }).map((_, i) => (
+          <div key={`gap-${i}`} aria-hidden="true" className="min-w-0 flex-1" />
+        ))}
+      </div>
 
-          {/* Balda */}
-          <div className="mt-1 h-1.5 rounded-b-sm bg-gradient-to-b from-wood to-wood/60 shadow-sm" />
+      {/* La balda: cara + canto */}
+      <div aria-hidden="true" className="mt-1.5">
+        <div
+          className={
+            "h-2 rounded-[1px] " +
+            (tone === "dark"
+              ? "bg-gradient-to-b from-wood-dark to-wood-dark/70"
+              : "bg-gradient-to-b from-wood to-wood-dark")
+          }
+          style={{ boxShadow: "inset 0 1px 0 rgb(255 255 255 / 0.18)" }}
+        />
+        <div className="h-1 rounded-b-sm bg-wood-dark/45 blur-[0.5px]" />
+      </div>
+    </li>
+  );
+}
 
-          <div className="mt-2 px-0.5">
-            <p className="font-display text-[0.8rem] leading-tight line-clamp-2">
-              {book.title}
-            </p>
-            <p className="mt-0.5 text-[0.7rem] text-ink-faint line-clamp-1">
-              {book.authors[0] ?? "—"}
-            </p>
-          </div>
+function BookOnShelf({
+  book,
+  index,
+  onOpen,
+}: {
+  book: Book;
+  index: number;
+  onOpen: (b: Book) => void;
+}) {
+  const bought = book.status === "bought";
+  return (
+    <div className="min-w-0 flex-1">
+      <button
+        onClick={() => onOpen(book)}
+        aria-label={`Ver ficha de ${book.title}`}
+        className="group block w-full text-left"
+      >
+        <div
+          className="relative"
+          style={{
+            animation: "sz-rise var(--dur-slow) var(--ease-paper) both",
+            animationDelay: `${Math.min(index, 11) * 24}ms`,
+          }}
+        >
+          <Cover
+            url={book.coverUrl}
+            title={book.title}
+            authors={book.authors}
+            className={
+              "aspect-[2/3] w-full rounded-sm shadow-cover transition duration-200 " +
+              "group-hover:-translate-y-1 group-hover:shadow-cover-lift " +
+              "group-active:translate-y-0 group-active:shadow-cover " +
+              (bought ? "saturate-[.55] opacity-90" : "")
+            }
+          />
+
+          {/* Lomo pintado: da cuerpo físico sin imágenes extra */}
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 left-0 w-[3px] rounded-l-sm bg-gradient-to-r from-ink/35 via-ink/10 to-transparent"
+          />
+
+          {bought && (
+            <span
+              className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 rounded-[2px] border border-gold-deep/70 bg-paper/70 px-1.5 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.14em] text-gold-deep mix-blend-multiply"
+              style={{
+                animation: "sz-stamp var(--dur-slow) var(--ease-paper) both",
+                transform: "rotate(-6deg)",
+              }}
+            >
+              Adquirido
+            </span>
+          )}
         </div>
-      ))}
+
+        <p className="mt-2 line-clamp-2 font-display text-meta font-medium leading-tight text-ink">
+          {book.title}
+        </p>
+        {book.authors[0] && (
+          <p className="line-clamp-1 text-[0.75rem] leading-tight text-ink-faint">
+            {book.authors[0]}
+          </p>
+        )}
+      </button>
     </div>
   );
 }
 
-/** Vista lista: filas compactas con acciones rápidas. */
-function ListView({ books, onOpen, onToggleBought }: Omit<Props, "view" | "sort">) {
+function ShelfView({
+  books,
+  onOpen,
+}: {
+  books: Book[];
+  onOpen: (b: Book) => void;
+}) {
+  const cols = useColumns();
+  const [showBought, setShowBought] = useState(false);
+
+  const pending = books.filter((b) => b.status !== "bought");
+  const bought = books.filter((b) => b.status === "bought");
+  const rows = chunk(pending, cols);
+  const boughtRows = chunk(bought, cols);
+
   return (
-    <ul className="divide-y divide-ink/8 overflow-hidden rounded-xl border border-ink/10 bg-paper/50">
-      {books.map((book) => (
-        <li
-          key={book.id}
-          className="flex gap-4 p-3 transition hover:bg-paper-2/50 sm:p-4"
-        >
-          <button onClick={() => onOpen(book)} className="shrink-0 self-start">
-            <Cover
-              url={book.coverUrl}
-              title={book.title}
-              authors={book.authors}
-              className={`h-20 w-14 shadow-sm ${
-                book.status === "bought" ? "opacity-60 saturate-50" : ""
-              }`}
+    <div className="space-y-8">
+      <ul className="space-y-8">
+        {rows.map((row, r) => (
+          <ShelfRow
+            key={r}
+            row={row}
+            cols={cols}
+            offset={r * cols}
+            onOpen={onOpen}
+          />
+        ))}
+      </ul>
+
+      {/* Los adquiridos salen de la lista de deseos y se apartan al final */}
+      {bought.length > 0 && (
+        <section className="space-y-4 border-t border-rule/60 pt-6">
+          <button
+            onClick={() => setShowBought((v) => !v)}
+            aria-expanded={showBought}
+            className="flex min-h-11 w-full items-center gap-2 text-left"
+          >
+            <h2 className="font-display text-lg font-semibold text-ink">
+              Adquiridos
+            </h2>
+            <span className="text-meta tabular-nums text-ink-faint">
+              {bought.length}
+            </span>
+            <IconChevronDown
+              className={
+                "ml-auto size-5 text-ink-faint transition-transform duration-200 " +
+                (showBought ? "rotate-180" : "")
+              }
             />
           </button>
 
-          {/* En móvil las acciones caen debajo; en pantalla ancha van al lado. */}
-          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-            <button
-              onClick={() => onOpen(book)}
-              className="min-w-0 flex-1 text-left"
-            >
-              <h3 className="font-display text-base leading-snug line-clamp-2 sm:line-clamp-1">
-                {book.title}
-              </h3>
-              <p className="mt-0.5 text-sm text-ink-soft line-clamp-1">
-                {book.authors.join(", ") || "Autor desconocido"}
-              </p>
-              <p className="mt-1 text-xs text-ink-faint line-clamp-1">
-                {[book.subjects[0], book.publishedYear]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </p>
-            </button>
+          {showBought && (
+            <ul className="space-y-8">
+              {boughtRows.map((row, r) => (
+                <ShelfRow
+                  key={r}
+                  row={row}
+                  cols={cols}
+                  offset={r * cols}
+                  onOpen={onOpen}
+                  tone="dark"
+                />
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+    </div>
+  );
+}
 
-            <div className="flex shrink-0 items-center gap-1.5">
-              <a
-                href={googleBuyUrl(book)}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="rounded-full border border-ink/15 px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-ink/5"
-                title="Buscar dónde comprarlo en Google"
-              >
-                Buscar
-              </a>
+// --- Vista lista -----------------------------------------------------------
+
+function ListView({
+  books,
+  onOpen,
+  onMenu,
+}: {
+  books: Book[];
+  onOpen: (b: Book) => void;
+  onMenu: (b: Book) => void;
+}) {
+  return (
+    <ul className="divide-y divide-rule/50 border-y border-rule/50">
+      {books.map((b) => {
+        const bought = b.status === "bought";
+        const subject = cleanSubjects(b.subjects)[0];
+        return (
+          <li key={b.id}>
+            <div className="group flex items-center gap-3 px-1 py-3 transition hover:bg-paper-2/60">
               <button
-                onClick={() => onToggleBought(book)}
-                className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
-                  book.status === "bought"
-                    ? "bg-ink/10 text-ink-soft hover:bg-ink/15"
-                    : "border border-ink/15 text-ink hover:bg-ink/5"
-                }`}
-                title={
-                  book.status === "bought"
-                    ? "Marcar como pendiente"
-                    : "Marcar como comprado"
-                }
+                onClick={() => onOpen(b)}
+                className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                aria-label={`Ver ficha de ${b.title}`}
               >
-                {book.status === "bought" ? "✓ Comprado" : "Comprado"}
+                <Cover
+                  url={b.coverUrl}
+                  title={b.title}
+                  authors={b.authors}
+                  className={
+                    "h-[60px] w-10 shrink-0 rounded-sm shadow-cover " +
+                    (bought ? "saturate-[.55]" : "")
+                  }
+                />
+                <div className="min-w-0 flex-1">
+                  <p
+                    className={
+                      "line-clamp-1 font-display text-base font-medium leading-snug " +
+                      (bought ? "text-ink-soft" : "text-ink")
+                    }
+                  >
+                    {b.title}
+                  </p>
+                  <p className="line-clamp-1 text-meta text-ink-faint">
+                    {[b.authors[0], b.publishedYear].filter(Boolean).join(" · ")}
+                  </p>
+                </div>
+
+                {bought ? (
+                  <span className="hidden shrink-0 rounded-[2px] border border-gold-deep/70 px-1.5 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.12em] text-gold-deep min-[360px]:inline-flex">
+                    Adquirido
+                  </span>
+                ) : subject ? (
+                  <span className="hidden shrink-0 rounded-full bg-paper-3 px-2.5 py-1 text-[0.75rem] text-ink-faint min-[360px]:inline-flex">
+                    {subject}
+                  </span>
+                ) : null}
+              </button>
+
+              <button
+                onClick={() => onMenu(b)}
+                aria-label={`Acciones de ${b.title}`}
+                aria-haspopup="menu"
+                className="inline-flex size-11 shrink-0 items-center justify-center rounded-full text-ink-soft transition hover:bg-ink/8"
+              >
+                <IconMore className="size-5" />
               </button>
             </div>
-          </div>
-        </li>
-      ))}
+          </li>
+        );
+      })}
     </ul>
   );
 }

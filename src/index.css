@@ -1,43 +1,185 @@
 @import "tailwindcss";
 
-/* --- Paleta e identidad "librería" ------------------------------------- */
+/* Modo oscuro por clase en <html>, no por media query:
+   la app ofrece Claro / Oscuro / Sistema. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
+  /* ---- papel ---- */
   --color-paper: #f4ecdd;
   --color-paper-2: #eee2cd;
   --color-paper-3: #e6d7bd;
+  --color-paper-raise: #faf5ea;
+
+  /* ---- tinta ---- */
   --color-ink: #2a2521;
-  --color-ink-soft: #5c5148;
-  --color-ink-faint: #8a7d6f;
+  --color-ink-soft: #4e443c;
+  --color-ink-faint: #675a4c;
+
+  /* ---- marca y madera ---- */
   --color-spine: #9a3b32;
   --color-spine-dark: #7c2d26;
-  --color-gold: #b8894b;
+  --color-gold: #a07c3c;
+  --color-gold-deep: #8a6224;
   --color-wood: #7a5a3a;
+  --color-wood-dark: #5f452c;
 
+  /* ---- líneas y foco ---- */
+  --color-rule: #a89272;
+  --color-rule-strong: #877253;
+  --color-focus: #2a2521;
+  --color-focus-inverse: #f4ecdd;
+
+  /* ---- tipografía ---- */
   --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia,
     "Times New Roman", serif;
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     Helvetica, Arial, sans-serif;
+
+  --text-micro: 0.75rem;
+  --text-micro--line-height: 1.25;
+  --text-micro--letter-spacing: 0.08em;
+  --text-meta: 0.8125rem;
+  --text-meta--line-height: 1.35;
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.55;
+  --text-lede: 1.0625rem;
+  --text-lede--line-height: 1.6;
+
+  /* ---- radios ---- */
+  --radius-sm: 0.125rem;   /* portadas: los libros no tienen esquinas redondas */
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;       /* tarjetas */
+  --radius-2xl: 1.25rem;   /* diálogos */
+
+  /* ---- sombras (siempre tinta cálida, nunca negro puro) ---- */
+  --shadow-cover: 0 1px 2px rgb(42 37 33 / 0.20), 0 6px 12px -6px rgb(42 37 33 / 0.22);
+  --shadow-cover-lift: 0 2px 4px rgb(42 37 33 / 0.22), 0 14px 24px -10px rgb(42 37 33 / 0.30);
+  --shadow-raise: 0 1px 2px rgb(42 37 33 / 0.08), 0 8px 20px -12px rgb(42 37 33 / 0.20);
+  --shadow-sheet: 0 24px 48px -12px rgb(42 37 33 / 0.35);
+  --shadow-toast: 0 10px 30px -10px rgb(42 37 33 / 0.45);
+
+  /* ---- movimiento ---- */
+  --ease-paper: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
 }
 
-/* --- Base -------------------------------------------------------------- */
-html {
-  -webkit-text-size-adjust: 100%;
+/* ---- modo oscuro: mismos nombres, otros valores ----
+   Las utilidades (bg-paper, text-ink-faint…) siguen funcionando sin
+   escribir una sola regla dark: en los componentes.
+   Papel viejo y cuero: no gris azulado. */
+html.dark {
+  --color-paper: #191411;
+  --color-paper-2: #211a15;
+  --color-paper-3: #2b221a;
+  --color-paper-raise: #241d17;
+
+  --color-ink: #f0e6d6;        /* 14.78:1 sobre paper */
+  --color-ink-soft: #cbbca6;   /* 9.82:1 */
+  --color-ink-faint: #a3947f;  /* 6.18:1 / 5.27:1 sobre paper-3 */
+
+  --color-spine: #d06253;      /* 4.83:1 sobre paper; texto encima: #191411 (4.83:1) */
+  --color-spine-dark: #dd7566; /* hover = más claro en oscuro (5.93:1) */
+  --color-gold: #c99a55;       /* 7.17:1 */
+  --color-gold-deep: #d0a260;  /* 7.85:1 — el dorado de texto también invierte */
+  --color-wood: #4a3524;
+  --color-wood-dark: #2f2117;
+
+  --color-rule: #453a2e;
+  --color-rule-strong: #7a6851; /* 3.42:1 sobre paper */
+  --color-focus: #f0e6d6;
+  --color-focus-inverse: #191411;
+
+  --shadow-cover: 0 1px 2px rgb(0 0 0 / 0.55), 0 6px 14px -6px rgb(0 0 0 / 0.6);
+  --shadow-cover-lift: 0 2px 6px rgb(0 0 0 / 0.6), 0 16px 28px -10px rgb(0 0 0 / 0.7);
+  --shadow-raise: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 22px -12px rgb(0 0 0 / 0.6);
+  --shadow-sheet: 0 24px 48px -12px rgb(0 0 0 / 0.7);
+  --shadow-toast: 0 10px 30px -10px rgb(0 0 0 / 0.75);
 }
 
 body {
   margin: 0;
   min-height: 100dvh;
   font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: 1.55;
   color: var(--color-ink);
   background-color: var(--color-paper);
-  /* Textura sutil de papel */
   background-image:
-    radial-gradient(circle at 20% 20%, rgba(184, 137, 75, 0.06), transparent 40%),
-    radial-gradient(circle at 80% 0%, rgba(154, 59, 50, 0.05), transparent 35%);
+    radial-gradient(circle at 20% 20%, rgb(160 124 60 / 0.07), transparent 42%),
+    radial-gradient(circle at 80% 0%, rgb(154 59 50 / 0.05), transparent 35%);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+html.dark body {
+  background-image:
+    radial-gradient(circle at 20% 20%, rgb(201 154 85 / 0.10), transparent 42%),
+    radial-gradient(circle at 80% 0%, rgb(208 98 83 / 0.08), transparent 38%);
 }
 
 h1, h2, h3 {
   font-family: var(--font-display);
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+/* Títulos y textos largos: evitar líneas huérfanas y palabras partidas. */
+p { text-wrap: pretty; }
+
+@layer base {
+  /* ---- FOCO: una sola regla para toda la app (6.3) ---- */
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+  /* Sobre superficies oscuras o sobre spine, el elemento se marca
+     con .on-dark y el anillo se invierte. */
+  .on-dark :focus-visible,
+  .on-dark:focus-visible {
+    outline-color: var(--color-focus-inverse);
+  }
+  :focus:not(:focus-visible) { outline: none; }
+
+  /* Nada de scroll encadenado desde los diálogos. */
+  [data-sheet] { overscroll-behavior: contain; }
+}
+
+/* ---- movimiento propio, sin librerías (6.12) ---- */
+@keyframes sz-rise {
+  from { opacity: 0; transform: translateY(10px) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes sz-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes sz-sheet-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes sz-toast-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes sz-shimmer {
+  from { background-position: -160% 0; }
+  to   { background-position: 260% 0; }
+}
+@keyframes sz-stamp {
+  from { opacity: 0; transform: rotate(-6deg) scale(1.4); }
+  60%  { opacity: 1; transform: rotate(-6deg) scale(0.96); }
+  to   { opacity: 1; transform: rotate(-6deg) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 1ms !important;
+  }
 }

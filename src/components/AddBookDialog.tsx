@@ -13,7 +13,10 @@ type Mode = "search" | "isbn" | "scan";
 type Props = {
   open: boolean;
   onClose: () => void;
-  onAdded: () => void;
+  /** Recibe el título guardado para poder avisar al usuario. */
+  onAdded: (title: string) => void;
+  /** Pestaña con la que abre: permite escanear en un solo toque. */
+  initialMode?: Mode;
 };
 
 /** Detecta si lo tecleado parece un ISBN (10/13 dígitos con guiones o no). */
@@ -24,8 +27,13 @@ function looksLikeIsbn(value: string): boolean {
   );
 }
 
-export function AddBookDialog({ open, onClose, onAdded }: Props) {
-  const [mode, setMode] = useState<Mode>("search");
+export function AddBookDialog({
+  open,
+  onClose,
+  onAdded,
+  initialMode = "search",
+}: Props) {
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<BookCandidate[]>([]);
   const [loading, setLoading] = useState(false);
@@ -35,6 +43,7 @@ export function AddBookDialog({ open, onClose, onAdded }: Props) {
 
   useEffect(() => {
     if (open) {
+      setMode(initialMode);
       setTimeout(() => inputRef.current?.focus(), 50);
     } else {
       // Al cerrar, volver al estado inicial (y apagar la cámara si estaba activa).
@@ -42,9 +51,8 @@ export function AddBookDialog({ open, onClose, onAdded }: Props) {
       setResults([]);
       setMessage(null);
       setLoading(false);
-      setMode("search");
     }
-  }, [open]);
+  }, [open, initialMode]);
 
   // Cerrar con Escape
   useEffect(() => {
@@ -100,7 +108,7 @@ export function AddBookDialog({ open, onClose, onAdded }: Props) {
     setMessage(null);
     try {
       await api.addBook(candidate);
-      onAdded();
+      onAdded(candidate.title);
       onClose();
     } catch (err: any) {
       if (err?.status === 409) {
@@ -153,7 +161,7 @@ export function AddBookDialog({ open, onClose, onAdded }: Props) {
       aria-modal="true"
       aria-label="Añadir libro"
     >
-      <div className="flex max-h-[84vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-paper shadow-2xl">
+      <div className="flex max-h-[84vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-paper shadow-sheet">
         {/* Cabecera + buscador */}
         <div className="border-b border-ink/10 p-5">
           <div className="mb-4 flex items-center justify-between">
@@ -169,7 +177,7 @@ export function AddBookDialog({ open, onClose, onAdded }: Props) {
             </button>
           </div>
 
-          <div className="mb-3 flex gap-1 rounded-full bg-ink/5 p-1 text-sm">
+          <div className="mb-3 flex gap-1 rounded-full bg-ink/5 p-1 text-body">
             <button
               onClick={() => setMode("scan")}
               className={`flex-1 rounded-full px-3 py-1.5 transition ${
@@ -227,7 +235,7 @@ export function AddBookDialog({ open, onClose, onAdded }: Props) {
             <div className="mb-4">
               <Suspense
                 fallback={
-                  <div className="flex aspect-[4/3] items-center justify-center rounded-xl bg-ink text-sm text-paper/80">
+                  <div className="flex aspect-[4/3] items-center justify-center rounded-xl bg-ink text-body text-paper/80">
                     Preparando la cámara…
                   </div>
                 }
@@ -241,12 +249,12 @@ export function AddBookDialog({ open, onClose, onAdded }: Props) {
           )}
 
           {message && (
-            <div className="mb-4 rounded-xl border border-gold/30 bg-gold/10 p-4 text-sm text-ink-soft">
+            <div className="mb-4 rounded-xl border border-gold/30 bg-gold/10 p-4 text-body text-ink-soft">
               <p>{message}</p>
               {results.length === 0 && query.trim() && (
                 <button
                   onClick={handleManualAdd}
-                  className="mt-3 rounded-full border border-ink/20 px-4 py-1.5 text-sm font-medium text-ink transition hover:bg-ink/5"
+                  className="mt-3 rounded-full border border-ink/20 px-4 py-1.5 text-body font-medium text-ink transition hover:bg-ink/5"
                 >
                   Añadir «{query.trim()}» manualmente
                 </button>
@@ -255,14 +263,14 @@ export function AddBookDialog({ open, onClose, onAdded }: Props) {
           )}
 
           {loading && (
-            <p className="py-8 text-center text-sm text-ink-faint">
+            <p className="py-8 text-center text-body text-ink-faint">
               Buscando en Google Books y Open Library…
             </p>
           )}
 
           {!loading && results.length > 0 && (
             <>
-              <p className="mb-3 text-xs uppercase tracking-wider text-ink-faint">
+              <p className="mb-3 text-meta uppercase tracking-wider text-ink-faint">
                 {results.length === 1
                   ? "1 coincidencia"
                   : `${results.length} coincidencias — elige la edición`}
@@ -286,10 +294,10 @@ export function AddBookDialog({ open, onClose, onAdded }: Props) {
                         <h3 className="font-display text-base leading-snug">
                           {b.title}
                         </h3>
-                        <p className="mt-0.5 text-sm text-ink-soft">
+                        <p className="mt-0.5 text-body text-ink-soft">
                           {b.authors.join(", ") || "Autor desconocido"}
                         </p>
-                        <p className="mt-1 text-xs text-ink-faint">
+                        <p className="mt-1 text-meta text-ink-faint">
                           {[b.publisher, b.publishedYear, b.isbn13]
                             .filter(Boolean)
                             .join(" · ")}
@@ -298,7 +306,7 @@ export function AddBookDialog({ open, onClose, onAdded }: Props) {
                       <button
                         onClick={() => handleAdd(b)}
                         disabled={busy}
-                        className="shrink-0 self-center rounded-full bg-ink px-4 py-2 text-sm font-medium text-paper transition hover:bg-ink-soft disabled:opacity-40"
+                        className="shrink-0 self-center rounded-full bg-ink px-4 py-2 text-body font-medium text-paper transition hover:bg-ink-soft disabled:opacity-40"
                       >
                         {busy ? "…" : "Guardar"}
                       </button>
@@ -310,7 +318,7 @@ export function AddBookDialog({ open, onClose, onAdded }: Props) {
           )}
 
           {!loading && results.length === 0 && !message && mode !== "scan" && (
-            <p className="py-10 text-center text-sm text-ink-faint">
+            <p className="py-10 text-center text-body text-ink-faint">
               Escanea el código de barras, busca por título o introduce un ISBN.
             </p>
           )}

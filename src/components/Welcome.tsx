@@ -12,7 +12,7 @@ export function Welcome({ onStart, onSkip }: Props) {
           <span className="font-display text-4xl leading-none">S0</span>
         </div>
 
-        <p className="mb-3 text-sm font-medium uppercase tracking-[0.2em] text-ink-faint">
+        <p className="mb-3 text-body font-medium uppercase tracking-[0.2em] text-ink-faint">
           Tu estante de libros por comprar
         </p>
 
@@ -25,7 +25,7 @@ export function Welcome({ onStart, onSkip }: Props) {
           dónde comprarlos. Sin prisa, sin olvidos.
         </p>
 
-        <ul className="mx-auto mt-9 max-w-sm space-y-3 text-left text-sm text-ink-soft">
+        <ul className="mx-auto mt-9 max-w-sm space-y-3 text-left text-body text-ink-soft">
           <Feature>
             Búscalos por <strong className="font-medium">título o ISBN</strong> y
             elige la edición exacta.

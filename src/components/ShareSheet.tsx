@@ -97,7 +97,7 @@ export function ShareSheet({ target, onClose }: Props) {
       aria-modal="true"
       aria-label="Compartir"
     >
-      <div className="w-full max-w-md rounded-2xl bg-paper p-6 shadow-2xl">
+      <div className="w-full max-w-md rounded-2xl bg-paper p-6 shadow-sheet">
         <div className="mb-1 flex items-start justify-between gap-4">
           <h2 className="font-display text-xl">Compartir</h2>
           <button
@@ -110,16 +110,16 @@ export function ShareSheet({ target, onClose }: Props) {
             </svg>
           </button>
         </div>
-        <p className="mb-5 text-sm text-ink-soft">{target.label}</p>
+        <p className="mb-5 text-body text-ink-soft">{target.label}</p>
 
         {error && (
-          <p className="mb-4 rounded-lg bg-spine/10 p-3 text-sm text-spine">
+          <p className="mb-4 rounded-lg bg-spine/10 p-3 text-body text-spine">
             {error}
           </p>
         )}
 
         {!url && !error && (
-          <p className="py-6 text-center text-sm text-ink-faint">
+          <p className="py-6 text-center text-body text-ink-faint">
             Creando enlace…
           </p>
         )}
@@ -130,7 +130,7 @@ export function ShareSheet({ target, onClose }: Props) {
             {typeof navigator !== "undefined" && "share" in navigator && (
               <button
                 onClick={nativeShare}
-                className="mb-3 w-full rounded-full bg-spine px-5 py-3 text-sm font-medium text-paper transition hover:bg-spine-dark"
+                className="mb-3 w-full rounded-full bg-spine px-5 py-3 text-body font-medium text-paper transition hover:bg-spine-dark"
               >
                 Compartir…
               </button>
@@ -143,7 +143,7 @@ export function ShareSheet({ target, onClose }: Props) {
                   href={ch.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex flex-col items-center gap-1.5 rounded-xl border border-ink/12 px-2 py-3 text-xs font-medium text-ink-soft transition hover:border-ink/25 hover:bg-paper-2/60"
+                  className="flex flex-col items-center gap-1.5 rounded-xl border border-ink/12 px-2 py-3 text-meta font-medium text-ink-soft transition hover:border-ink/25 hover:bg-paper-2/60"
                 >
                   {ch.name}
                 </a>
@@ -151,18 +151,18 @@ export function ShareSheet({ target, onClose }: Props) {
             </div>
 
             <div className="mt-4 flex items-center gap-2 rounded-xl bg-paper-2/70 p-2">
-              <span className="min-w-0 flex-1 truncate px-2 text-xs text-ink-faint">
+              <span className="min-w-0 flex-1 truncate px-2 text-meta text-ink-faint">
                 {url}
               </span>
               <button
                 onClick={copy}
-                className="shrink-0 rounded-full bg-ink px-4 py-2 text-xs font-medium text-paper transition hover:bg-ink-soft"
+                className="shrink-0 rounded-full bg-ink px-4 py-2 text-meta font-medium text-paper transition hover:bg-ink-soft"
               >
                 {copied ? "¡Copiado!" : "Copiar"}
               </button>
             </div>
 
-            <p className="mt-4 text-center text-xs text-ink-faint">
+            <p className="mt-4 text-center text-meta text-ink-faint">
               Quien tenga el enlace podrá ver esto en modo lectura.
             </p>
           </>

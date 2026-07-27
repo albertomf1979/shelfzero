@@ -35,7 +35,7 @@ export function SharedView({ token }: { token: string }) {
   if (!data) {
     return (
       <Frame>
-        <p className="py-20 text-center text-sm text-ink-faint">Cargando…</p>
+        <p className="py-20 text-center text-body text-ink-faint">Cargando…</p>
       </Frame>
     );
   }
@@ -46,12 +46,12 @@ export function SharedView({ token }: { token: string }) {
   return (
     <Frame>
       <div className="mb-8">
-        <p className="mb-1 text-xs uppercase tracking-[0.15em] text-ink-faint">
+        <p className="mb-1 text-meta uppercase tracking-[0.15em] text-ink-faint">
           {data.kind === "list" ? "Lista compartida" : "Libro compartido"}
         </p>
         <h1 className="font-display text-3xl leading-tight">{heading}</h1>
         {data.kind === "list" && (
-          <p className="mt-2 text-sm text-ink-soft">
+          <p className="mt-2 text-body text-ink-soft">
             {data.books.length}{" "}
             {data.books.length === 1 ? "libro" : "libros"}
           </p>
@@ -59,7 +59,7 @@ export function SharedView({ token }: { token: string }) {
       </div>
 
       {data.books.length === 0 ? (
-        <p className="py-16 text-center text-sm text-ink-faint">
+        <p className="py-16 text-center text-body text-ink-faint">
           Esta lista todavía no tiene libros.
         </p>
       ) : (
@@ -77,16 +77,16 @@ export function SharedView({ token }: { token: string }) {
               />
               <div className="min-w-0 flex-1">
                 <h2 className="font-display text-lg leading-snug">{b.title}</h2>
-                <p className="mt-0.5 text-sm text-ink-soft">
+                <p className="mt-0.5 text-body text-ink-soft">
                   {b.authors.join(", ") || "Autor desconocido"}
                 </p>
-                <p className="mt-1 text-xs text-ink-faint">
+                <p className="mt-1 text-meta text-ink-faint">
                   {[b.subjects[0], b.publishedYear, b.isbn13]
                     .filter(Boolean)
                     .join(" · ")}
                 </p>
                 {b.description && (
-                  <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-ink-soft">
+                  <p className="mt-2 line-clamp-3 text-body leading-relaxed text-ink-soft">
                     {b.description}
                   </p>
                 )}
@@ -94,7 +94,7 @@ export function SharedView({ token }: { token: string }) {
                   href={googleBuyUrl(b)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-3 inline-block rounded-full border border-ink/15 px-4 py-1.5 text-xs font-medium text-ink transition hover:bg-ink/5"
+                  className="mt-3 inline-block rounded-full border border-ink/15 px-4 py-1.5 text-meta font-medium text-ink transition hover:bg-ink/5"
                 >
                   Buscar dónde comprarlo ↗
                 </a>
