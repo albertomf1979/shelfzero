@@ -9,9 +9,16 @@ import { PromptDialog } from "./components/PromptDialog";
 import { Shelf } from "./components/Shelf";
 import { SharedView } from "./components/SharedView";
 import { ShareSheet } from "./components/ShareSheet";
+import { ShelfMenu } from "./components/ShelfMenu";
 import { useToast } from "./components/Toast";
 import { Welcome } from "./components/Welcome";
-import { IconBarcode, IconGrid, IconList, IconPlus } from "./components/icons";
+import {
+  IconBarcode,
+  IconGrid,
+  IconList,
+  IconMore,
+  IconPlus,
+} from "./components/icons";
 
 type ShareTarget =
   | { kind: "book"; refId: number; label: string }
@@ -53,6 +60,8 @@ function Shelves() {
   const [toDelete, setToDelete] = useState<Book | null>(null);
   const [newListOpen, setNewListOpen] = useState(false);
   const [menuBook, setMenuBook] = useState<Book | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const toast = useToast();
 
   useEffect(() => localStorage.setItem("sz.sort", sort), [sort]);
@@ -129,10 +138,10 @@ function Shelves() {
     setAddOpen(true);
   }
 
-  function dismissWelcome(openAdd: boolean) {
+  function dismissWelcome(scan: boolean) {
     localStorage.setItem("sz.seen", "1");
     setShowWelcome(false);
-    if (openAdd) setAddOpen(true);
+    if (scan) openAdd("scan");
   }
 
   if (showWelcome) {
@@ -143,6 +152,7 @@ function Shelves() {
       />
     );
   }
+
 
   const pending = books.filter((b) => b.status !== "bought").length;
 
@@ -174,6 +184,14 @@ function Shelves() {
           >
             <IconPlus className="size-4" />
             Añadir
+          </button>
+
+          <button
+            onClick={() => setSettingsOpen(true)}
+            aria-label="Ajustes"
+            className="inline-flex size-11 shrink-0 items-center justify-center rounded-full text-ink-soft transition hover:bg-ink/8"
+          >
+            <IconMore className="size-5" />
           </button>
         </div>
       </header>
@@ -343,6 +361,16 @@ function Shelves() {
         onConfirm={() => toDelete && deleteBook(toDelete)}
         onCancel={() => setToDelete(null)}
       />
+
+      <ShelfMenu
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onAbout={() => setAboutOpen(true)}
+      />
+
+      {aboutOpen && (
+        <Welcome mode="about" onClose={() => setAboutOpen(false)} />
+      )}
 
       <PromptDialog
         open={newListOpen}
