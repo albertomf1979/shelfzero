@@ -138,6 +138,20 @@ h1, h2, h3 {
 p { text-wrap: pretty; }
 
 @layer base {
+  /* ---- CURSOR ----
+     Tailwind v4 no fuerza `pointer` en los botones, así que salía la
+     flecha en todo lo pulsable. Se declara una vez para toda la app. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  label[for] {
+    cursor: pointer;
+  }
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+
   /* ---- FOCO: una sola regla para toda la app (6.3) ---- */
   :focus-visible {
     outline: 2px solid var(--color-focus);

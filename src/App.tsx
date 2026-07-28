@@ -5,6 +5,7 @@ import { AddBookDialog, type AddMode } from "./components/AddBookDialog";
 import { BookDetail } from "./components/BookDetail";
 import { BookMenu } from "./components/BookMenu";
 import { ConfirmDialog } from "./components/ConfirmDialog";
+import { Home } from "./components/Home";
 import { PromptDialog } from "./components/PromptDialog";
 import { Shelf } from "./components/Shelf";
 import { SharedView } from "./components/SharedView";
@@ -50,6 +51,8 @@ function Shelves() {
     () => (localStorage.getItem("sz.view") as ViewMode) ?? "shelf"
   );
   const [activeList, setActiveList] = useState<number | null>(null);
+  /** La app abre por la portada; el estante completo es el segundo paso. */
+  const [screen, setScreen] = useState<"home" | "shelf">("home");
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
   const [addMode, setAddMode] = useState<AddMode>("choose");
@@ -145,8 +148,9 @@ function Shelves() {
     }
   }
 
-  /** El logotipo devuelve siempre al estante completo, cierre lo que haya abierto. */
+  /** El logotipo devuelve siempre a la portada, cierre lo que haya abierto. */
   function goHome() {
+    setScreen("home");
     setActiveList(null);
     setDetail(null);
     setMenuBook(null);
@@ -154,6 +158,11 @@ function Shelves() {
     setShare(null);
     setSettingsOpen(false);
     setAboutOpen(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function goShelf() {
+    setScreen("shelf");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -186,21 +195,24 @@ function Shelves() {
       {/* Cabecera */}
       <header className="sticky top-0 z-30 border-b border-ink/10 bg-paper/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6">
-          {/* Vuelve siempre al estante completo, cierre lo que haya abierto */}
+          {/* Vuelve siempre a la portada, cierre lo que haya abierto */}
           <button
             onClick={goHome}
-            aria-label="Ir al estante"
-            className="flex items-center gap-2.5"
+            aria-label="Volver a la portada"
+            title="Volver a la portada"
+            className="group flex items-center gap-2.5 rounded-lg transition hover:opacity-80"
           >
-            <span className="flex size-9 items-center justify-center rounded-lg bg-spine text-paper">
+            <span className="flex size-9 items-center justify-center rounded-lg bg-spine text-paper transition group-hover:scale-105">
               <IconBook className="size-5" />
             </span>
             <span className="font-display text-xl">ShelfZero</span>
           </button>
 
-          <span className="ml-1 hidden text-body text-ink-faint sm:inline">
-            {pending} por comprar
-          </span>
+          {screen === "shelf" && (
+            <span className="ml-1 hidden text-body text-ink-faint sm:inline">
+              {pending} por comprar
+            </span>
+          )}
 
           <button
             onClick={() => openAdd("choose")}
@@ -220,7 +232,21 @@ function Shelves() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+      {/* Portada: resumen destacado antes de entrar al estante */}
+      {screen === "home" && !loading && (
+        <Home
+          books={books}
+          onOpenShelf={goShelf}
+          onOpenBook={setDetail}
+          onScan={() => openAdd("scan")}
+          onAdd={() => openAdd("choose")}
+        />
+      )}
+
+      <main
+        className="mx-auto max-w-6xl px-4 py-6 sm:px-6"
+        hidden={screen !== "shelf"}
+      >
         {/* Controles */}
         <div className="mb-6 flex items-center gap-2">
           {/* Orden (FR6) — se desliza en horizontal si no cabe */}
@@ -333,8 +359,8 @@ function Shelves() {
       </main>
 
       {/* Escanear en un solo toque: el gesto principal en la librería.
-          Se oculta en el estado vacío, que ya ofrece el botón. */}
-      {books.length > 0 && (
+          Solo en el estante; la portada ya ofrece su propio botón. */}
+      {screen === "shelf" && books.length > 0 && (
         <button
           onClick={() => openAdd("scan")}
           aria-label="Escanear el código de barras de un libro"
