@@ -598,6 +598,27 @@ export default {
       request = new Request(url, request);
     }
 
-    return app.fetch(request, env, ctx);
+    const response = await app.fetch(request, env, ctx);
+
+    // Nada del estante privado puede quedar en una caché compartida. El
+    // servidor de assets etiqueta el HTML como "public", y la caché de borde
+    // llegó a guardar la app ya autenticada y a servírsela a cualquiera que
+    // pidiese la misma codificación. Vary: Cookie porque la respuesta depende
+    // de la sesión.
+    if (!isDemo) {
+      const type = response.headers.get("Content-Type") ?? "";
+      if (type.includes("text/html")) {
+        const headers = new Headers(response.headers);
+        headers.set("Cache-Control", "private, no-store, max-age=0");
+        headers.set("Vary", "Cookie");
+        return new Response(response.body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers,
+        });
+      }
+    }
+
+    return response;
   },
 };

@@ -6,7 +6,13 @@
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "binding": "ASSETS",
-    "not_found_handling": "single-page-application"
+    "not_found_handling": "single-page-application",
+    // Imprescindible: sin esto, Cloudflare sirve index.html directamente ante
+    // cualquier navegación (Sec-Fetch-Mode: navigate) SIN ejecutar el Worker,
+    // y la app aparecía sin pedir la contraseña. Las peticiones que no eran
+    // navegación sí pasaban por el Worker, de ahí que curl viera el candado y
+    // el navegador no.
+    "run_worker_first": true
   },
   "observability": {
     "enabled": true

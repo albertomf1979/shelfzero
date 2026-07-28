@@ -24,11 +24,26 @@ export class DemoLimitError extends Error {
   }
 }
 
+/**
+ * La sesión caducó o nunca existió: se recarga para que sea el servidor quien
+ * muestre la pantalla de acceso. Hace falta porque el service worker puede
+ * haber servido la app desde su caché sin pasar por el candado; sin esto, la
+ * app se queda a la vista respondiendo "No autorizado" a cada acción.
+ */
+function goToLogin() {
+  if (IS_DEMO || !navigator.onLine) return; // sin red, recargar no arregla nada
+  window.location.replace(`${BASE}/`);
+}
+
 async function req<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     ...init,
     headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
   });
+  if (res.status === 401) {
+    goToLogin();
+    throw new Error("Sesión caducada");
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const err = new Error((data as any)?.error ?? "Error de red") as Error & {

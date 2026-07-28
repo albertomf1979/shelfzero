@@ -26,6 +26,16 @@ export default defineConfig({
     tailwindcss(),
     cloudflare(),
     VitePWA({
+      // El service worker se autodestruye a propósito.
+      //
+      // Con una app protegida por contraseña, cachear el documento es un
+      // problema de seguridad: el servidor respondía "identifícate" y el
+      // navegador seguía enseñando la copia guardada. Se intentó primero sin
+      // precache de HTML y luego con NetworkFirst, y en ambos casos quedaban
+      // huecos. Un estante privado tiene que preguntarle siempre al servidor,
+      // así que se renuncia al uso sin conexión: cada carga pasa por el
+      // candado. Este service worker, además, borra los que hubiera instalados.
+      selfDestroying: true,
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg", "apple-touch-icon.png"],
       manifest: {
