@@ -46,7 +46,15 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
+        // Ruta absoluta a propósito: con la relativa que se genera por
+        // defecto, el service worker acabó sirviendo el index.html de la raíz
+        // del dominio —la home del sitio— en lugar del de la app.
+        navigateFallback: `${BASE}index.html`,
         navigateFallbackDenylist: [/\/api\//],
+        // Un service worker viejo no debe sobrevivir a un despliegue.
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
         runtimeCaching: [
           {
             // El estante ya visto sigue consultable sin conexión.

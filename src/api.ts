@@ -66,11 +66,14 @@ export const api = {
   deleteList: (id: number) =>
     req<{ ok: true }>(`${BASE}/api/lists/${id}`, { method: "DELETE" }),
 
-  createShare: (kind: "book" | "list", refId: number) =>
-    req<{ token: string; url: string }>(`${BASE}/api/shares`, {
+  /** Devuelve el enlace ya absoluto, compuesto con el origen del navegador. */
+  createShare: async (kind: "book" | "list", refId: number) => {
+    const r = await req<{ token: string; path: string }>(`${BASE}/api/shares`, {
       method: "POST",
       body: JSON.stringify({ kind, refId }),
-    }),
+    });
+    return { token: r.token, url: new URL(r.path, window.location.origin).href };
+  },
 
   getShare: (token: string) =>
     req<{ kind: "book" | "list"; title: string | null; books: Book[] }>(

@@ -436,7 +436,9 @@ app.post("/api/shares", async (c) => {
       .run();
   }
 
-  return c.json({ token, url: `${new URL(c.req.url).origin}${BASE}/s/${token}` });
+  // Ruta relativa: el Worker no conoce el dominio público desde el que se le
+  // reenvía, así que el enlace absoluto lo compone el cliente con su origen.
+  return c.json({ token, path: `${BASE}/s/${token}` });
 });
 
 /** Contenido público de un enlace compartido (sin autenticación, solo lectura). */
@@ -492,9 +494,15 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     const url = new URL(request.url);
 
-    // /shelfzero -> /shelfzero/ (los assets del manifiesto son relativos)
+    // /shelfzero -> /shelfzero/ (los assets del manifiesto son relativos).
+    // La cabecera Location va en relativo a propósito: cuando se sirve detrás
+    // del dominio público, una URL absoluta llevaría al usuario al dominio
+    // workers.dev de este Worker.
     if (url.pathname === BASE) {
-      return Response.redirect(`${url.origin}${BASE}/${url.search}`, 301);
+      return new Response(null, {
+        status: 301,
+        headers: { Location: `${BASE}/${url.search}` },
+      });
     }
 
     if (url.pathname.startsWith(`${BASE}/`)) {
