@@ -12,8 +12,8 @@
 
 ---
 
-ShelfZero es una aplicación web instalable (PWA) para **llevar la lista de los libros
-que quieres comprar**. Añade libros escaneando el código de barras con la cámara,
+ShelfZero es una aplicación web para **llevar la lista de los libros que quieres
+comprar**. Añade libros escaneando el código de barras con la cámara,
 buscándolos por título o tecleando el ISBN; la app compone la ficha con portada,
 autor, temática, ISBN y resumen, y la guarda en tu estante.
 
@@ -48,7 +48,7 @@ libros son solo tuyos. Funciona íntegramente sobre la **capa gratuita de Cloudf
 - **Buscar dónde comprarlo**: abre Google con el libro ya buscado.
 - **Compartir** un libro o una lista con un enlace público de solo lectura, por
   WhatsApp, email, SMS o X.
-- **Modo claro y oscuro**, instalable en el móvil y consultable sin conexión.
+- **Modo claro y oscuro**, y una interfaz pensada para usarse con una mano en el móvil.
 
 <div align="center">
 
@@ -73,7 +73,7 @@ visible en todos los controles, objetivos táctiles de 44 px y respeto de
 
 | Capa | Qué usa |
 |---|---|
-| Interfaz | React 19 + Vite + TypeScript + Tailwind v4, empaquetado como PWA |
+| Interfaz | React 19 + Vite + TypeScript + Tailwind v4 |
 | Escaneo | ZXing, **en el dispositivo** (no se sube ninguna imagen) |
 | API | Cloudflare Workers con Hono |
 | Base de datos | Cloudflare D1 (SQLite) |
@@ -164,8 +164,21 @@ La demostración no escribe nada en el servidor: guarda los libros en el
 nadie ve ni puede tocar el de otro. Su API está limitada a las búsquedas.
 
 Los assets se referencian en relativo, así que para cambiar las rutas basta con
-tocar `PRIVATE_BASE` y `DEMO_BASE` en `worker/index.ts` (y `APP_BASE` en
-`vite.config.ts`, que es lo que declara el manifiesto de la PWA).
+tocar `PRIVATE_BASE` y `DEMO_BASE` en `worker/index.ts`.
+
+### Por qué no hay service worker
+
+Se probó a empaquetarla como PWA con uso sin conexión y se retiró. Con el estante
+tras contraseña, cachear el documento resultó ser un problema de seguridad: el
+servidor respondía «identifícate» y el navegador seguía enseñando su copia
+guardada. Se intentó sin precachear el HTML y luego con NetworkFirst, y en ambos
+casos quedaban huecos. Un estante privado tiene que preguntarle siempre al
+servidor, así que se renunció al modo sin conexión a cambio de que cada carga
+pase por el candado.
+
+Por la misma razón, `run_worker_first` está activado: sin él Cloudflare sirve
+`index.html` directamente ante cualquier navegación, **sin ejecutar el Worker**, y
+la app se abría sin pedir la contraseña.
 
 ## Proteger tu estante
 
@@ -195,7 +208,7 @@ npx wrangler secret put GOOGLE_BOOKS_API_KEY   # para producción
 ```
 shelfzero/
 ├── migrations/       Esquema de la base de datos (D1)
-├── public/           Iconos de la PWA
+├── public/           Iconos y favicon
 ├── docs/             Capturas del README
 ├── src/              Interfaz React
 │   ├── components/   Portada, estante, ficha, escáner, diálogos, compartir
