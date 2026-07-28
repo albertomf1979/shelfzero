@@ -2,6 +2,7 @@ export type Book = {
   id: number;
   isbn13: string | null;
   isbn10: string | null;
+  asin: string | null;
   title: string;
   authors: string[];
   subjects: string[];
@@ -22,6 +23,7 @@ export type Book = {
 export type BookCandidate = {
   isbn13?: string;
   isbn10?: string;
+  asin?: string;
   title: string;
   authors: string[];
   subjects: string[];

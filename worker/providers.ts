@@ -4,6 +4,8 @@
 export type BookData = {
   isbn13?: string;
   isbn10?: string;
+  /** Identificador de Amazon; los ebooks y muchos KDP no tienen ISBN. */
+  asin?: string;
   title: string;
   authors: string[];
   subjects: string[];

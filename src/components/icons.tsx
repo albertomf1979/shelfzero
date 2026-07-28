@@ -94,6 +94,13 @@ export const IconSun = (p: IconProps) => (
   </Icon>
 );
 
+export const IconPencil = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+  </Icon>
+);
+
 /** Marca: un libro abierto, a trazo. Sustituye al monograma "S0". */
 export const IconBook = ({ className = "size-6" }: IconProps) => (
   <svg

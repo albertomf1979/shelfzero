@@ -55,6 +55,7 @@ export const demoStore = {
       id: data.nextId++,
       isbn13: candidate.isbn13 ?? null,
       isbn10: candidate.isbn10 ?? null,
+      asin: candidate.asin?.trim().toUpperCase() || null,
       title: candidate.title,
       authors: candidate.authors ?? [],
       subjects: candidate.subjects ?? [],
