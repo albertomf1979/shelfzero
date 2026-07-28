@@ -53,7 +53,9 @@ Casos de uso principales:
 ### Alta de libros
 - **FR1.** Añadir por **ISBN** (escaneando el código de barras con la cámara o escribiéndolo) → búsqueda exacta.
 - **FR2.** Añadir por **título** → si hay varias coincidencias, mostrar una **lista de resultados** (portada + autor + año + edición) para que el usuario elija.
-- **FR3.** Si el escaneo o la búsqueda **no encuentran coincidencias**, avisar y ofrecer **introducir el título manualmente** (o crear la ficha a mano).
+- **FR3.** **Alta a mano** como cuarta vía de entrada, no solo como salida de emergencia: formulario completo (título obligatorio; autor, identificador, año, editorial, temática, portada y resumen opcionales) accesible desde el propio selector de método. También es lo que se ofrece cuando el escaneo o la búsqueda **no encuentran coincidencias**.
+  - *Corregido tras la verificación:* Amazon no vuelca los metadatos de KDP en Google Books ni en Open Library, así que los autopublicados —y todos los ebooks, que carecen de ISBN— no aparecen por mucho que se afine la búsqueda. El alta a mano es la única respuesta posible, y por eso sube de categoría.
+- **FR3b.** El identificador acepta **ISBN-13, ISBN-10 o ASIN de Amazon**, distinguiéndolos por su forma y validando el dígito de control cuando es un ISBN. Se muestra en la ficha y se usa en el enlace de compra.
 - **FR4.** Ficha del libro con: **portada, título, autor(es), temática/materia, ISBN y resumen breve**. Campos editables por el usuario si vienen incompletos.
 
 ### Organización
@@ -81,8 +83,9 @@ Casos de uso principales:
 ## 5. Requisitos no funcionales
 
 - **Rendimiento:** interacción fluida en móvil de gama media; escaneo de ISBN en < 2 s con buena luz.
-- **Offline:** como PWA, el estante ya cargado debe poder consultarse sin conexión (cache de datos + assets); las altas nuevas requieren conexión.
-- **Accesibilidad:** contraste AA, navegación por teclado, `alt` en portadas, objetivos táctiles ≥ 44 px.
+- **~~Offline:~~ retirado.** El requisito original era que el estante ya cargado se consultase sin conexión. Con el estante tras contraseña resultó incompatible: el service worker seguía sirviendo su copia guardada cuando el servidor ya respondía «identifícate». Se renunció al uso sin conexión a cambio de que **cada carga pase por el candado**.
+- **Accesibilidad:** contraste AA, navegación por teclado, `alt` en portadas, objetivos táctiles ≥ 44 px, **campos de 16 px en táctil** y **zoom del usuario nunca deshabilitado** (WCAG 1.4.4).
+- **Sin desbordamiento horizontal:** ninguna pantalla puede hacer que la página se arrastre de lado. Se verifica midiendo `scrollWidth` contra `clientWidth` a 320 px, no a ojo.
 - **Privacidad:** datos mínimos; nada se comparte sin acción explícita del usuario.
 - **Portabilidad (open-source):** despliegue reproducible por terceros con documentación clara y configuración por variables de entorno.
 
@@ -256,6 +259,8 @@ settings(key TEXT PK, value TEXT)
 | Escaneo falla con poca luz / sin cámara | ISBN manual + búsqueda por título + alta manual |
 | Fricción de Cloudflare Access para self-hosters | Documentación clara + modo contraseña alternativo |
 | Límites de cuota de Google Books | Caché en el Worker + clave opcional para más cuota |
+| **Autopublicados de Amazon KDP ausentes de los catálogos** *(confirmado, no hipotético)* | Alta a mano con soporte de ASIN. No hay mitigación por la vía de la búsqueda: Amazon no publica esos metadatos |
+| **Fallos que solo aparecen en pantallas estrechas** | Revisión explícita a 320 px con medición de desbordamiento; no basta con reducir la ventana del escritorio |
 
 ---
 
@@ -274,4 +279,24 @@ settings(key TEXT PK, value TEXT)
 3. **Plataforma:** **PWA instalable** (web + móvil).
 4. **Presupuesto:** **100% gratis** (capa free de Cloudflare + Google Books/Open Library).
 5. **Datos:** en **Cloudflare D1** (sincroniza entre dispositivos, facilita compartir).
-6. **Protección:** **Cloudflare Access** (Zero Trust), con modo contraseña como alternativa documentada.
+6. **Protección:** ~~Cloudflare Access~~ → **contraseña propia** como modo principal (cookie `HttpOnly` con un HMAC derivado de la contraseña), y Cloudflare Access documentado como alternativa. Se invirtió el orden porque la contraseña no obliga a quien se despliegue una copia a configurar Zero Trust.
+7. **Sin service worker:** se retira el uso sin conexión. Un estante privado tiene que preguntarle siempre al servidor (ver §5).
+8. **Alta a mano de primera clase**, con ASIN además de ISBN, tras confirmar que los autopublicados de KDP no están en los catálogos (ver §4 y §15).
+9. **El zoom del usuario no se deshabilita nunca.** El salto de escala de iOS al enfocar un campo se resuelve subiendo la letra a 16 px, no con `maximum-scale=1`.
+
+---
+
+## 18. Revisión previa a la publicación
+
+Verificación completa de las dos versiones antes de abrir el repositorio. Lo que se comprobó y lo que se corrigió.
+
+**Fallos encontrados y subsanados** — los cuatro solo se manifestaban en pantallas estrechas, y ninguno era visible reduciendo la ventana del escritorio:
+
+| Fallo | Causa | Corrección |
+|---|---|---|
+| La pantalla se descuadraba al escribir y había que recolocarla a mano | Campos de 15 px; iOS Safari amplía la página por debajo de 16 px | 16 px en pantallas táctiles, conservando el zoom del usuario |
+| El resumen de la portada perdía media frase y los dos botones | Rejilla sin columnas explícitas dimensionada a `max-content`, recortada por `overflow-hidden` | `grid-cols-1`, que es `minmax(0, 1fr)` |
+| La página se podía arrastrar en horizontal | La cabecera desbordaba 4 px por debajo de 360 px | «Añadir» se queda con el icono en esos anchos |
+| La elipsis de `truncate` no aparecía en toda la app | `p { text-wrap: pretty }` fuera de capa ganaba a las utilidades, y anulaba el `nowrap` | Regla movida a `@layer base`; cubiertas medidas en `cqw` |
+
+**Comprobado sin incidencias:** candado (sin sesión, todas las rutas privadas responden acceso o 401, también con cabeceras de navegación real); contraseña errónea sin cookie; cookie `HttpOnly; Secure; SameSite=Lax` acotada a la ruta; cookies falsificadas rechazadas; alta, edición, listas, comprados y compartir; inyección SQL en el parámetro de orden ignorada; campos no editables rechazados; XSS almacenado devuelto como texto literal; límite de 3 libros de la demostración y bloqueo de escrituras en servidor (403).

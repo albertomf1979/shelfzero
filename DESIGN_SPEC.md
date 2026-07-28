@@ -198,16 +198,27 @@ html.dark body {
     radial-gradient(circle at 80% 0%, rgb(208 98 83 / 0.08), transparent 38%);
 }
 
+/* Nota: esta regla sí se deja fuera de capa a sabiendas. Gana a las utilidades, así
+   que un `font-medium` sobre un <h3> no surtiría efecto; hoy no molesta, pero es la
+   misma trampa que la de `p` de abajo. Si alguna vez hace falta una excepción, el
+   sitio correcto es moverla a @layer base, no añadir !important. */
 h1, h2, h3 {
   font-family: var(--font-display);
   font-weight: 600;
   text-wrap: balance;
 }
 
-/* Títulos y textos largos: evitar líneas huérfanas y palabras partidas. */
-p { text-wrap: pretty; }
-
 @layer base {
+  /* Títulos y textos largos: evitar líneas huérfanas y palabras partidas.
+
+     ⚠️ CORREGIDO. Esta regla estaba escrita fuera de @layer, y el CSS sin capa gana
+     a las utilidades de Tailwind sea cual sea la especificidad. Como `text-wrap` y
+     `white-space` comparten la propiedad interna `text-wrap-mode`, le quitaba el
+     `nowrap` a `.truncate`: la elipsis no llegaba a aparecer en ninguna parte de la
+     app, y el texto envolvía en varias líneas. También anulaba `text-balance` en los
+     párrafos que lo pedían — incluido el título de la cubierta generada. */
+  p { text-wrap: pretty; }
+
   /* ---- FOCO: una sola regla para toda la app (6.3) ---- */
   :focus-visible {
     outline: 2px solid var(--color-focus);
@@ -274,12 +285,23 @@ p { text-wrap: pretty; }
 | Display 3 | `font-display text-lg leading-snug font-semibold` | 18 | Cabecera de diálogo, nombre de sección ("Adquiridos") |
 | Título de libro | `font-display text-base leading-snug font-medium` | 16 | Filas de la vista lista, resultados de búsqueda |
 | Título en rejilla | `font-display text-meta leading-tight font-medium` | 13 | Bajo la portada en la rejilla (2 líneas máx.) |
-| Cuerpo | `text-body leading-normal` | 15 | Interfaz general, botones, campos |
+| Cuerpo | `text-body leading-normal` | 15 | Interfaz general, botones, campos (⚠️ ver enmienda) |
 | Lede | `text-lede leading-relaxed text-ink-soft` | 17 | Resumen del libro, párrafos de bienvenida |
 | Meta | `text-meta text-ink-faint` | 13 | Autor secundario, año, contadores, marcadores de posición |
 | Micro | `text-micro font-medium uppercase tracking-wide text-ink-faint` | 12 | Etiquetas de sección, sello, "3 de 47". **Nunca frases** |
 
 Reglas: máximo **tres** niveles por pantalla. La display siempre en `font-medium`/`font-semibold` (la pila Palatino/Georgia en `bold` se ensucia). Nada de `font-bold` en serif. Los números de contadores con `tabular-nums`.
+
+> **⚠️ Enmienda de implementación — campos de formulario en táctil.**
+> Los 15 px de `text-body` valen para todo *menos* para `input`, `textarea` y `select`
+> en pantallas táctiles, donde suben a **16 px**. No es una preferencia estética: iOS
+> Safari amplía la página entera al enfocar un campo por debajo de ese umbral, y al
+> cerrar el teclado la deja descuadrada. La regla vive fuera de `@layer` en
+> `src/index.css`, bajo `@media (pointer: coarse)`, para ganar a la utilidad de
+> Tailwind sin `!important`. El escritorio conserva los 15 px de la especificación.
+>
+> Descartado poner `maximum-scale=1` en el viewport: también evitaría el salto, pero
+> impediría ampliar a quien lo necesita para leer (WCAG 1.4.4).
 
 ### Espaciado (ritmo de 8)
 
@@ -745,8 +767,26 @@ export function ShelfView({ books, onOpen }: { books: Book[]; onOpen: (b: Book) 
 
 1. Fondo: color de lomo + textura de papel con dos degradados (`repeating-linear-gradient` de 1 px al 4% + radial cálido). Sin imágenes.
 2. Composición: filete doble arriba, título centrado en `font-display` con `text-balance` y `line-clamp-4`, autor abajo en micro versalitas, y sello editorial "S0" pequeño en el pie.
-3. Tamaño de título por longitud: `≤18 → text-base`, `≤40 → text-meta`, resto `text-[0.6875rem]`.
+3. Tamaño de título por longitud: `≤18 → text-base`, `≤40 → text-meta`, resto `text-[0.6875rem]` (⚠️ ver enmienda).
 4. Texto siempre `#f4ecdd` (paper) sobre el color de lomo; los 8 lomos deben cumplir ≥4.5:1 con paper — **verificar y sustituir los que no lleguen** (ver §10.4.8, punto abierto 2).
+
+> **⚠️ Enmienda de implementación — el tamaño no puede ser fijo.**
+> El punto 3 asume una cubierta de un solo tamaño, y el mismo componente se dibuja
+> **desde 40 px** (miniatura de la vista lista) **hasta 190 px** (ficha). Con píxeles
+> fijos, en las pequeñas el título se salía de su caja hasta 55 px y pisaba al autor;
+> no se veía porque el `overflow-hidden` lo recortaba.
+>
+> Los tres escalones se conservan, pero medidos contra el ancho de la propia cubierta
+> y con tope: `min(16cqw, 1rem)`, `min(13cqw, 0.8125rem)`, `min(10.5cqw, 0.6875rem)`,
+> con el contenedor declarado `@container`. El tope deja las cubiertas grandes
+> exactamente como pedía la especificación y solo encoge las estrechas. Se añade
+> `hyphens-auto break-words`, porque un título de una sola palabra larga no cabe de
+> ninguna manera. Por debajo de 55 px de cubierta el texto se oculta —queda el color
+> y el filete—; el `aria-label` sigue anunciando el título.
+>
+> El `truncate` del autor **no funcionaba**: una regla `p { text-wrap: pretty }` fuera
+> de capa le quitaba el `nowrap`, y el nombre envolvía en hasta cuatro líneas. Ver la
+> enmienda de tipografía.
 
 ```jsx
 <div className="relative flex aspect-[2/3] w-full flex-col justify-between overflow-hidden
