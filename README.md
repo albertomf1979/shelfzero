@@ -30,9 +30,12 @@ libros son solo tuyos. Funciona íntegramente sobre la **capa gratuita de Cloudf
 
 ## Qué hace
 
-- **Tres formas de añadir**: escaneando el ISBN (EAN-13) con la cámara, buscando por
-  título —con lista de ediciones para elegir— o tecleando el ISBN. Si no hay
-  coincidencias, avisa y permite darlo de alta a mano.
+- **Cuatro formas de añadir**: escaneando el ISBN (EAN-13) con la cámara, buscando
+  por título —con lista de ediciones para elegir—, tecleando el ISBN, o dando el
+  libro de alta a mano. Esta última no es solo el plan B cuando una búsqueda falla:
+  es la vía para los **autopublicados en Amazon KDP** y para cualquier edición que no
+  esté en los catálogos. Acepta **ISBN-13, ISBN-10 o ASIN**, distinguiéndolos por su
+  forma y validando el dígito de control cuando es un ISBN.
 - **Fichas completas**: portada, título, autor, temática, ISBN y resumen, compuestas
   desde Google Books y Open Library.
 - **Dos vistas**: estantería, con las portadas apoyadas en baldas de madera, y lista
@@ -69,6 +72,11 @@ verificado sobre la página renderizada componiendo los fondos translúcidos. Fo
 visible en todos los controles, objetivos táctiles de 44 px y respeto de
 `prefers-reduced-motion`.
 
+En móvil los campos miden **16 px**, que es el umbral por debajo del cual iOS Safari
+amplía la página sola al enfocarlos. La alternativa habitual —`maximum-scale=1` en el
+viewport— también lo evitaría, pero de paso impediría ampliar a quien lo necesita para
+leer, y eso incumple la **WCAG 1.4.4**. Aquí el zoom del usuario se conserva intacto.
+
 ## Tecnología
 
 | Capa | Qué usa |
@@ -77,12 +85,12 @@ visible en todos los controles, objetivos táctiles de 44 px y respeto de
 | Escaneo | ZXing, **en el dispositivo** (no se sube ninguna imagen) |
 | API | Cloudflare Workers con Hono |
 | Base de datos | Cloudflare D1 (SQLite) |
-| Metadatos | Google Books API + Open Library (ambas gratuitas) |
-| Acceso | Cloudflare Access (Zero Trust) |
+| Metadatos | Google Books API + Open Library (ambas gratuitas), con alta a mano cuando ninguna lo tiene |
+| Acceso | Contraseña propia (cookie `HttpOnly` con HMAC); Cloudflare Access como alternativa |
 
 Sin dependencias de interfaz: ni librerías de componentes, ni de animación, ni de
-iconos. El bundle principal son ~78 kB comprimidos; el escáner son otros 118 kB que
-solo se descargan al abrir la cámara.
+iconos. El bundle principal son ~81 kB comprimidos (más 11 kB de CSS); el escáner son
+otros 119 kB que solo se descargan al abrir la cámara.
 
 ## Coste
 
@@ -211,7 +219,7 @@ shelfzero/
 ├── public/           Iconos y favicon
 ├── docs/             Capturas del README
 ├── src/              Interfaz React
-│   ├── components/   Portada, estante, ficha, escáner, diálogos, compartir
+│   ├── components/   Portada, estante, ficha, escáner, alta a mano, diálogos, compartir
 │   ├── lib/          Temáticas, fechas y tema claro/oscuro
 │   ├── api.ts        Cliente de la API
 │   └── types.ts      Tipos compartidos
@@ -223,7 +231,9 @@ shelfzero/
 
 ## Notas de implementación
 
-Algunas cosas que se aprendieron probando contra las APIs reales, por si ahorran tiempo:
+Algunas cosas que se aprendieron probando de verdad, por si ahorran tiempo.
+
+### Con los catálogos
 
 - **Google Books agota su cuota diaria sin clave**, así que Open Library no es un
   adorno: es el respaldo que mantiene la app en pie, tanto por ISBN como por título.
@@ -236,6 +246,39 @@ Algunas cosas que se aprendieron probando contra las APIs reales, por si ahorran
 - **Las temáticas vienen sucias y en inglés** incluso para libros en español
   (`Spanish language books`, `Fiction in English`): se filtran y se traducen las más
   frecuentes.
+- **Amazon no alimenta a ninguno de los dos catálogos.** Los libros autopublicados
+  con KDP suelen faltar —sobre todo los que usan el ISBN gratuito del bloque 979-8—
+  y los ebooks no llegan a tener ISBN: solo ASIN. No es un fallo de la búsqueda que
+  se pueda arreglar consultando mejor; por eso el alta a mano es una vía de primera
+  clase y no un mensaje de error.
+
+### En el móvil
+
+Los cuatro fallos que salieron en la revisión previa a publicar, todos invisibles en
+escritorio:
+
+- **iOS Safari amplía la página entera al enfocar un campo de menos de 16 px**, y al
+  cerrar el teclado la deja ampliada y descuadrada: hay que recolocarla con el dedo.
+  Los campos medían 15 px. Un píxel. Se suben a 16 px solo en pantallas táctiles
+  (`@media (pointer: coarse)`), sin tocar el viewport (ver *Accesibilidad*).
+- **Una rejilla CSS sin columnas explícitas dimensiona su columna a `max-content`**,
+  y puede crecer más que el contenedor sin que nada lo impida. En el resumen de la
+  portada, el `overflow-hidden` de la tarjeta recortaba media frase y los dos botones
+  principales. `grid-cols-1` lo acota, porque en Tailwind es `minmax(0, 1fr)`.
+- **El CSS fuera de capa gana a las utilidades de Tailwind**, sin importar la
+  especificidad. Una regla suelta `p { text-wrap: pretty }` le estaba quitando el
+  `nowrap` a `.truncate` —`text-wrap` y `white-space` comparten la propiedad interna
+  `text-wrap-mode`—, así que la elipsis no aparecía nunca en toda la app. Dentro de
+  `@layer base` cada cosa vuelve a su sitio. La misma mecánica se usa a propósito, y
+  documentada, para los 16 px de los campos: eso sí debe ganar.
+- **Basta un desbordamiento de 4 px para que el móvil deje arrastrar la página.** Por
+  debajo de 360 px la cabecera no cabía por poco. Conviene medir
+  `documentElement.scrollWidth` contra `clientWidth` a 320 px, no solo mirar.
+
+Y una consecuencia: las cubiertas generadas se dibujan **desde 40 px hasta 190 px con
+el mismo componente**, así que su texto se mide en `cqw` contra el ancho de la propia
+cubierta en lugar de en píxeles fijos. Por debajo de 55 px el título saldría a 3 px y
+se oculta —queda el color y el filete—, pero el `aria-label` sigue anunciándolo.
 
 ## Privacidad
 
