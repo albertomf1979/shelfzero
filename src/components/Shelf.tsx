@@ -3,7 +3,7 @@ import type { Book, SortMode, ViewMode } from "../types";
 import { formatDateShort, isoDate } from "../lib/dates";
 import { cleanSubjects } from "../lib/subjects";
 import { Cover } from "./Cover";
-import { IconChevronDown, IconMore } from "./icons";
+import { IconMore } from "./icons";
 
 type Props = {
   books: Book[];
@@ -185,7 +185,7 @@ function BookOnShelf({
                 transform: "rotate(-6deg)",
               }}
             >
-              Adquirido
+              Comprado
             </span>
           )}
         </div>
@@ -211,66 +211,23 @@ function ShelfView({
   onOpen: (b: Book) => void;
 }) {
   const cols = useColumns();
-  const [showBought, setShowBought] = useState(false);
-
-  const pending = books.filter((b) => b.status !== "bought");
-  const bought = books.filter((b) => b.status === "bought");
-  const rows = chunk(pending, cols);
-  const boughtRows = chunk(bought, cols);
+  // Los comprados ya no se mezclan aquí: tienen su propia pestaña.
+  const rows = chunk(books, cols);
+  const allBought = books.length > 0 && books.every((b) => b.status === "bought");
 
   return (
-    <div className="space-y-8">
-      <ul className="space-y-8">
-        {rows.map((row, r) => (
-          <ShelfRow
-            key={r}
-            row={row}
-            cols={cols}
-            offset={r * cols}
-            onOpen={onOpen}
-          />
-        ))}
-      </ul>
-
-      {/* Los adquiridos salen de la lista de deseos y se apartan al final */}
-      {bought.length > 0 && (
-        <section className="space-y-4 border-t border-rule/60 pt-6">
-          <button
-            onClick={() => setShowBought((v) => !v)}
-            aria-expanded={showBought}
-            className="flex min-h-11 w-full items-center gap-2 text-left"
-          >
-            <h2 className="font-display text-lg font-semibold text-ink">
-              Adquiridos
-            </h2>
-            <span className="text-meta tabular-nums text-ink-faint">
-              {bought.length}
-            </span>
-            <IconChevronDown
-              className={
-                "ml-auto size-5 text-ink-faint transition-transform duration-200 " +
-                (showBought ? "rotate-180" : "")
-              }
-            />
-          </button>
-
-          {showBought && (
-            <ul className="space-y-8">
-              {boughtRows.map((row, r) => (
-                <ShelfRow
-                  key={r}
-                  row={row}
-                  cols={cols}
-                  offset={r * cols}
-                  onOpen={onOpen}
-                  tone="dark"
-                />
-              ))}
-            </ul>
-          )}
-        </section>
-      )}
-    </div>
+    <ul className="space-y-8">
+      {rows.map((row, r) => (
+        <ShelfRow
+          key={r}
+          row={row}
+          cols={cols}
+          offset={r * cols}
+          onOpen={onOpen}
+          tone={allBought ? "dark" : "light"}
+        />
+      ))}
+    </ul>
   );
 }
 
@@ -330,7 +287,7 @@ function ListView({
 
                 {bought ? (
                   <span className="hidden shrink-0 rounded-[2px] border border-gold-deep/70 px-1.5 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.12em] text-gold-deep min-[360px]:inline-flex">
-                    Adquirido
+                    Comprado
                   </span>
                 ) : subject ? (
                   <span className="hidden shrink-0 rounded-full bg-paper-3 px-2.5 py-1 text-[0.75rem] text-ink-faint min-[360px]:inline-flex">

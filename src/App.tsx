@@ -51,6 +51,8 @@ function Shelves() {
     () => (localStorage.getItem("sz.view") as ViewMode) ?? "shelf"
   );
   const [activeList, setActiveList] = useState<number | null>(null);
+  /** Los comprados viven en su propia pestaña, fuera de las listas de deseos. */
+  const [boughtView, setBoughtView] = useState(false);
   /** La app abre por la portada; el estante completo es el segundo paso. */
   const [screen, setScreen] = useState<"home" | "shelf">("home");
   const [loading, setLoading] = useState(true);
@@ -71,12 +73,12 @@ function Shelves() {
   useEffect(() => localStorage.setItem("sz.sort", sort), [sort]);
   useEffect(() => localStorage.setItem("sz.view", view), [view]);
 
+  // Se carga el estante entero (una wishlist personal es pequeña) y el filtrado
+  // por lista o pestaña se hace en cliente: así cambiar de vista es instantáneo
+  // y la portada puede contar sobre el total.
   const load = useCallback(async () => {
     try {
-      const [b, l] = await Promise.all([
-        api.getBooks({ sort, list: activeList }),
-        api.getLists(),
-      ]);
+      const [b, l] = await Promise.all([api.getBooks({ sort }), api.getLists()]);
       setBooks(b.books);
       setLists(l.lists);
     } catch {
@@ -84,7 +86,7 @@ function Shelves() {
     } finally {
       setLoading(false);
     }
-  }, [sort, activeList]);
+  }, [sort]);
 
   useEffect(() => {
     load();
@@ -99,8 +101,8 @@ function Shelves() {
     setDetail((d) => (d?.id === book.id ? { ...d, status: next } : d));
     toast(
       next === "bought"
-        ? `«${book.title}» marcado como adquirido`
-        : `«${book.title}» vuelve a la lista de deseos`
+        ? `«${book.title}» comprado: pasa a la pestaña Comprados`
+        : `«${book.title}» vuelve a tus deseados`
     );
     await api.updateBook(book.id, { status: next }).catch(load);
   }
@@ -188,7 +190,24 @@ function Shelves() {
   }
 
 
-  const pending = books.filter((b) => b.status !== "bought").length;
+  const wishlist = books.filter((b) => b.status !== "bought");
+  const boughtBooks = books.filter((b) => b.status === "bought");
+  const pending = wishlist.length;
+
+  /** Lo que se muestra: los comprados nunca se mezclan con los deseados. */
+  const visible = boughtView
+    ? boughtBooks
+    : activeList === null
+      ? wishlist
+      : wishlist.filter((b) => b.listIds.includes(activeList));
+
+  /** Las listas cuentan solo deseados, que es lo que contienen ahora. */
+  const listCounts = new Map<number, number>();
+  for (const b of wishlist) {
+    for (const id of b.listIds) {
+      listCounts.set(id, (listCounts.get(id) ?? 0) + 1);
+    }
+  }
 
   return (
     <div className="min-h-[100dvh]">
@@ -289,12 +308,15 @@ function Shelves() {
           </div>
         </div>
 
-        {/* Listas (FR7) */}
+        {/* Listas de deseos (FR7) + la pestaña de comprados */}
         <div className="mb-7 flex flex-wrap items-center gap-2">
           <button
-            onClick={() => setActiveList(null)}
+            onClick={() => {
+              setActiveList(null);
+              setBoughtView(false);
+            }}
             className={`rounded-full px-3.5 py-1.5 text-body transition ${
-              activeList === null
+              !boughtView && activeList === null
                 ? "bg-ink text-paper"
                 : "border border-ink/15 text-ink-soft hover:bg-ink/5"
             }`}
@@ -304,15 +326,25 @@ function Shelves() {
           {lists.map((l) => (
             <button
               key={l.id}
-              onClick={() => setActiveList(l.id)}
-              className={`rounded-full px-3.5 py-1.5 text-body transition ${
-                activeList === l.id
+              onClick={() => {
+                setActiveList(l.id);
+                setBoughtView(false);
+              }}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-body transition ${
+                !boughtView && activeList === l.id
                   ? "bg-ink text-paper"
                   : "border border-ink/15 text-ink-soft hover:bg-ink/5"
               }`}
             >
+              {l.color && (
+                <span
+                  aria-hidden="true"
+                  className="size-2 rounded-full"
+                  style={{ backgroundColor: l.color }}
+                />
+              )}
               {l.name}
-              <span className="ml-1.5 opacity-60">{l.count}</span>
+              <span className="opacity-60">{listCounts.get(l.id) ?? 0}</span>
             </button>
           ))}
           <button
@@ -323,8 +355,32 @@ function Shelves() {
             + Lista
           </button>
 
+          {/* Comprados: fuera de las listas de deseos */}
+          {boughtBooks.length > 0 && (
+            <>
+              <span
+                aria-hidden="true"
+                className="mx-1 h-5 w-px shrink-0 bg-rule/60"
+              />
+              <button
+                onClick={() => {
+                  setBoughtView(true);
+                  setActiveList(null);
+                }}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-body transition ${
+                  boughtView
+                    ? "bg-gold-deep text-paper"
+                    : "border border-gold-deep/45 text-gold-deep hover:bg-gold-deep/10"
+                }`}
+              >
+                Comprados
+                <span className="opacity-70">{boughtBooks.length}</span>
+              </button>
+            </>
+          )}
+
           {/* Compartir la lista activa (FR11) */}
-          {activeList !== null && (
+          {!boughtView && activeList !== null && (
             <button
               onClick={() => {
                 const l = lists.find((x) => x.id === activeList);
@@ -340,16 +396,20 @@ function Shelves() {
         {/* Contenido */}
         {loading ? (
           <p className="py-20 text-center text-body text-ink-faint">Cargando…</p>
-        ) : books.length === 0 ? (
+        ) : visible.length === 0 ? (
           <EmptyState
             onScan={() => openAdd("scan")}
             onSearch={() => openAdd("choose")}
-            onClearFilter={() => setActiveList(null)}
-            filtered={activeList !== null}
+            onClearFilter={() => {
+              setActiveList(null);
+              setBoughtView(false);
+            }}
+            filtered={activeList !== null || boughtView}
+            bought={boughtView}
           />
         ) : (
           <Shelf
-            books={books}
+            books={visible}
             view={view}
             sort={sort}
             onOpen={setDetail}
@@ -448,20 +508,24 @@ function EmptyState({
   onSearch,
   onClearFilter,
   filtered,
+  bought = false,
 }: {
   onScan: () => void;
   onSearch: () => void;
   onClearFilter: () => void;
   filtered: boolean;
+  bought?: boolean;
 }) {
   if (filtered) {
     return (
       <div className="mx-auto max-w-[20rem] py-12 text-center">
         <h2 className="font-display text-2xl font-semibold">
-          Esta lista está vacía
+          {bought ? "Todavía no has comprado nada" : "Esta lista está vacía"}
         </h2>
         <p className="mt-2 text-lede text-ink-soft">
-          Añade libros a esta lista desde su ficha.
+          {bought
+            ? "Los libros que marques como comprados aparecerán aquí."
+            : "Añade libros a esta lista desde su ficha."}
         </p>
         <button
           onClick={onClearFilter}

@@ -83,7 +83,7 @@ export function BookDetail({
                     transform: "rotate(-6deg)",
                   }}
                 >
-                  Adquirido
+                  Comprado
                 </span>
               )}
             </div>

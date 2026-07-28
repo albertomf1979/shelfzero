@@ -63,7 +63,7 @@ export function BookMenu({
             }}
             className="flex min-h-12 items-center rounded-lg px-3 text-left text-body text-ink transition hover:bg-paper-2"
           >
-            {bought ? "Devolver a la lista de deseos" : "Marcar como adquirido"}
+            {bought ? "Devolver a deseados" : "Marcar como comprado"}
           </button>
           <button
             onClick={() => {

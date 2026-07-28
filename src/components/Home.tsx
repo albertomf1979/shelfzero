@@ -39,14 +39,14 @@ export function Home({ books, onOpenShelf, onOpenBook, onScan, onAdd }: Props) {
             <h1 className="mt-2 font-display text-4xl leading-[1.05] sm:text-5xl">
               <span className="tabular-nums">{pending}</span>{" "}
               {pending === 1 ? "libro" : "libros"}
-              <span className="block text-ink-soft">esperando</span>
+              <span className="block text-ink-soft">deseados</span>
             </h1>
 
             <p className="mt-4 max-w-md text-lede text-ink-soft">
               {bought > 0 ? (
                 <>
                   Llevas <strong className="font-medium">{bought}</strong>{" "}
-                  {bought === 1 ? "adquirido" : "adquiridos"} de{" "}
+                  {bought === 1 ? "comprado" : "comprados"} de{" "}
                   <strong className="font-medium">{total}</strong>. Sin prisa,
                   sin olvidos.
                 </>
