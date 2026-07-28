@@ -4,7 +4,15 @@ import tailwindcss from "@tailwindcss/vite";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { VitePWA } from "vite-plugin-pwa";
 
+/**
+ * La app se sirve bajo albertomartinfernandez.com/shelfzero, así que todo
+ * (assets, API, PWA y enlaces compartidos) cuelga de ese prefijo. En local
+ * ocurre lo mismo para que lo que se prueba sea lo que se despliega.
+ */
+const BASE = "/shelfzero/";
+
 export default defineConfig({
+  base: BASE,
   plugins: [
     react(),
     tailwindcss(),
@@ -22,12 +30,14 @@ export default defineConfig({
         background_color: "#f4ecdd",
         display: "standalone",
         orientation: "portrait",
-        start_url: "/",
+        id: BASE,
+        scope: BASE,
+        start_url: BASE,
         icons: [
-          { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
-          { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
+          { src: "icon-192.png", sizes: "192x192", type: "image/png" },
+          { src: "icon-512.png", sizes: "512x512", type: "image/png" },
           {
-            src: "/icon-512-maskable.png",
+            src: "icon-512-maskable.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "maskable",
@@ -36,11 +46,11 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
-        navigateFallbackDenylist: [/^\/api\//],
+        navigateFallbackDenylist: [/\/api\//],
         runtimeCaching: [
           {
             // El estante ya visto sigue consultable sin conexión.
-            urlPattern: /^\/api\/(books|lists)/,
+            urlPattern: /\/shelfzero\/api\/(books|lists)/,
             handler: "NetworkFirst",
             options: {
               cacheName: "shelfzero-api",

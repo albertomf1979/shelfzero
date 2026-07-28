@@ -1,5 +1,8 @@
 import type { Book, BookCandidate, BookList, SortMode } from "./types";
 
+/** La app vive bajo /shelfzero: todas las rutas cuelgan de ahí. */
+export const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
 async function req<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     ...init,
@@ -21,12 +24,12 @@ async function req<T>(url: string, init?: RequestInit): Promise<T> {
 export const api = {
   lookupIsbn: (isbn: string) =>
     req<{ book: BookCandidate | null; notFound?: boolean }>(
-      `/api/lookup?isbn=${encodeURIComponent(isbn)}`
+      `${BASE}/api/lookup?isbn=${encodeURIComponent(isbn)}`
     ),
 
   search: (q: string) =>
     req<{ results: BookCandidate[]; notFound?: boolean }>(
-      `/api/search?q=${encodeURIComponent(q)}`
+      `${BASE}/api/search?q=${encodeURIComponent(q)}`
     ),
 
   getBooks: (opts: { sort?: SortMode; list?: number | null } = {}) => {
@@ -34,51 +37,51 @@ export const api = {
     if (opts.sort) params.set("sort", opts.sort);
     if (opts.list) params.set("list", String(opts.list));
     const qs = params.toString();
-    return req<{ books: Book[] }>(`/api/books${qs ? `?${qs}` : ""}`);
+    return req<{ books: Book[] }>(`${BASE}/api/books${qs ? `?${qs}` : ""}`);
   },
 
   addBook: (book: BookCandidate & { listIds?: number[] }) =>
-    req<{ book: Book }>("/api/books", {
+    req<{ book: Book }>(`${BASE}/api/books`, {
       method: "POST",
       body: JSON.stringify(book),
     }),
 
   updateBook: (id: number, patch: Partial<Book>) =>
-    req<{ book: Book }>(`/api/books/${id}`, {
+    req<{ book: Book }>(`${BASE}/api/books/${id}`, {
       method: "PATCH",
       body: JSON.stringify(patch),
     }),
 
   deleteBook: (id: number) =>
-    req<{ ok: true }>(`/api/books/${id}`, { method: "DELETE" }),
+    req<{ ok: true }>(`${BASE}/api/books/${id}`, { method: "DELETE" }),
 
-  getLists: () => req<{ lists: BookList[] }>("/api/lists"),
+  getLists: () => req<{ lists: BookList[] }>(`${BASE}/api/lists`),
 
   addList: (name: string, color?: string | null) =>
-    req<{ list: BookList }>("/api/lists", {
+    req<{ list: BookList }>(`${BASE}/api/lists`, {
       method: "POST",
       body: JSON.stringify({ name, color }),
     }),
 
   deleteList: (id: number) =>
-    req<{ ok: true }>(`/api/lists/${id}`, { method: "DELETE" }),
+    req<{ ok: true }>(`${BASE}/api/lists/${id}`, { method: "DELETE" }),
 
   createShare: (kind: "book" | "list", refId: number) =>
-    req<{ token: string; url: string }>("/api/shares", {
+    req<{ token: string; url: string }>(`${BASE}/api/shares`, {
       method: "POST",
       body: JSON.stringify({ kind, refId }),
     }),
 
   getShare: (token: string) =>
     req<{ kind: "book" | "list"; title: string | null; books: Book[] }>(
-      `/api/shares/${encodeURIComponent(token)}`
+      `${BASE}/api/shares/${encodeURIComponent(token)}`
     ),
 
   addToList: (listId: number, bookId: number) =>
-    req<{ ok: true }>(`/api/lists/${listId}/books/${bookId}`, { method: "POST" }),
+    req<{ ok: true }>(`${BASE}/api/lists/${listId}/books/${bookId}`, { method: "POST" }),
 
   removeFromList: (listId: number, bookId: number) =>
-    req<{ ok: true }>(`/api/lists/${listId}/books/${bookId}`, {
+    req<{ ok: true }>(`${BASE}/api/lists/${listId}/books/${bookId}`, {
       method: "DELETE",
     }),
 };

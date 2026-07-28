@@ -14,6 +14,13 @@ export interface Env {
   GOOGLE_BOOKS_API_KEY?: string;
 }
 
+/**
+ * La app se publica bajo albertomartinfernandez.com/shelfzero. El prefijo se
+ * recorta antes de que Hono enrute, de modo que las rutas de aquí siguen
+ * siendo "/api/…" y los assets se buscan por su ruta real en dist/client.
+ */
+const BASE = "/shelfzero";
+
 const app = new Hono<{ Bindings: Env }>();
 
 // --- Utilidades ------------------------------------------------------------
@@ -429,7 +436,7 @@ app.post("/api/shares", async (c) => {
       .run();
   }
 
-  return c.json({ token, url: `${new URL(c.req.url).origin}/s/${token}` });
+  return c.json({ token, url: `${new URL(c.req.url).origin}${BASE}/s/${token}` });
 });
 
 /** Contenido público de un enlace compartido (sin autenticación, solo lectura). */
@@ -481,4 +488,27 @@ app.get("/api/shares/:token", async (c) => {
 
 app.all("*", (c) => c.env.ASSETS.fetch(c.req.raw));
 
-export default app;
+export default {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    const url = new URL(request.url);
+
+    // /shelfzero -> /shelfzero/ (los assets del manifiesto son relativos)
+    if (url.pathname === BASE) {
+      return Response.redirect(`${url.origin}${BASE}/${url.search}`, 301);
+    }
+
+    if (url.pathname.startsWith(`${BASE}/`)) {
+      // En producción los assets se sirven desde la raíz del directorio, así
+      // que hay que recortar el prefijo. En desarrollo Vite ya los sirve bajo
+      // él, y recortarlo provocaría un bucle de redirección: ahí solo se
+      // recorta para la API, que es lo que Hono necesita enrutar.
+      const isApi = url.pathname.startsWith(`${BASE}/api/`);
+      if (import.meta.env.PROD || isApi) {
+        url.pathname = url.pathname.slice(BASE.length) || "/";
+        request = new Request(url, request);
+      }
+    }
+
+    return app.fetch(request, env, ctx);
+  },
+};

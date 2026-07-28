@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { api } from "./api";
+import { api, BASE } from "./api";
 import type { Book, BookList, SortMode, ViewMode } from "./types";
 import { AddBookDialog, type AddMode } from "./components/AddBookDialog";
 import { BookDetail } from "./components/BookDetail";
@@ -34,8 +34,10 @@ const SORT_LABELS: Record<SortMode, string> = {
 };
 
 export default function App() {
-  // Ruta pública de solo lectura: /s/:token (no necesita cuenta).
-  const sharedToken = window.location.pathname.match(/^\/s\/([\w-]+)$/)?.[1];
+  // Ruta pública de solo lectura: <base>/s/:token (no necesita cuenta).
+  const sharedToken = window.location.pathname.match(
+    new RegExp(`^${BASE}/s/([\\w-]+)$`)
+  )?.[1];
   if (sharedToken) return <SharedView token={sharedToken} />;
 
   return <Shelves />;
