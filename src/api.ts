@@ -164,9 +164,14 @@ export function googleBuyUrl(book: {
   title: string;
   authors?: string[];
   isbn13?: string | null;
+  asin?: string | null;
 }): string {
+  // El ASIN localiza el libro en Amazon con más precisión que el título, y es
+  // lo único que tienen los autopublicados en KDP.
   const q = book.isbn13
     ? `${book.isbn13} ${book.title} comprar`
-    : `${book.title} ${book.authors?.[0] ?? ""} comprar libro`;
+    : book.asin
+      ? `${book.asin} ${book.title} comprar`
+      : `${book.title} ${book.authors?.[0] ?? ""} comprar libro`;
   return `https://www.google.com/search?q=${encodeURIComponent(q.trim())}`;
 }

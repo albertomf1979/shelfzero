@@ -3,8 +3,9 @@ import { api, DemoLimitError, DEMO_LIMIT, IS_DEMO } from "../api";
 import type { BookCandidate, BookList } from "../types";
 import { Cover } from "./Cover";
 import { DemoLimitNotice } from "./DemoBanner";
+import { ManualForm } from "./ManualForm";
 import { Sheet } from "./Sheet";
-import { IconBarcode, IconSearch, IconPlus } from "./icons";
+import { IconBarcode, IconSearch, IconPlus, IconPencil } from "./icons";
 
 // La librería de escaneo pesa ~450 kB: solo se descarga al abrir la cámara.
 const BarcodeScanner = lazy(() =>
@@ -12,7 +13,7 @@ const BarcodeScanner = lazy(() =>
 );
 
 /** `choose` deja elegir el método; el resto entra directo. */
-export type AddMode = "choose" | "scan" | "search" | "isbn";
+export type AddMode = "choose" | "scan" | "search" | "isbn" | "manual";
 
 type Props = {
   open: boolean;
@@ -128,11 +129,13 @@ export function AddBookDialog({
       ? "Guardar en el estante"
       : mode === "choose"
         ? "Añadir un libro"
-        : mode === "scan"
-          ? "Escanear el código"
-          : mode === "isbn"
-            ? "Buscar por ISBN"
-            : "Buscar por título";
+        : mode === "manual"
+          ? "Añadirlo a mano"
+          : mode === "scan"
+            ? "Escanear el código"
+            : mode === "isbn"
+              ? "Buscar por ISBN"
+              : "Buscar por título";
 
   return (
     <Sheet open={open} onClose={onClose} labelledBy="add-title" size="lg">
@@ -179,6 +182,8 @@ export function AddBookDialog({
             />
           ) : mode === "choose" ? (
             <MethodChooser onPick={setMode} />
+          ) : mode === "manual" ? (
+            <ManualForm initialTitle={query.trim()} onReady={setChosen} />
           ) : (
             <>
               {mode === "scan" ? (
@@ -223,17 +228,10 @@ export function AddBookDialog({
                   <p>{message}</p>
                   {results.length === 0 && query.trim() && (
                     <button
-                      onClick={() =>
-                        setChosen({
-                          title: query.trim(),
-                          authors: [],
-                          subjects: [],
-                          source: "manual",
-                        })
-                      }
+                      onClick={() => setMode("manual")}
                       className="mt-3 inline-flex min-h-9 items-center rounded-full border border-rule-strong px-4 text-body font-medium text-ink transition hover:bg-paper-2"
                     >
-                      Añadir «{query.trim()}» manualmente
+                      Añadir «{query.trim()}» a mano
                     </button>
                   )}
                 </div>
@@ -322,6 +320,13 @@ function MethodChooser({ onPick }: { onPick: (m: AddMode) => void }) {
       icon: <IconPlus className="size-6" />,
       label: "Introducir el ISBN",
       hint: "Los 13 dígitos de la contraportada",
+      disabled: false,
+    },
+    {
+      mode: "manual" as const,
+      icon: <IconPencil className="size-6" />,
+      label: "Añadirlo a mano",
+      hint: "Autopublicados y libros que no están en los catálogos",
       disabled: false,
     },
   ];

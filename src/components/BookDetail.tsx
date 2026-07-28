@@ -37,7 +37,13 @@ export function BookDetail({
   const meta = [
     book.publisher,
     book.publishedYear,
-    book.isbn13 ? `ISBN ${book.isbn13}` : book.isbn10 ? `ISBN ${book.isbn10}` : null,
+    book.isbn13
+      ? `ISBN ${book.isbn13}`
+      : book.isbn10
+        ? `ISBN ${book.isbn10}`
+        : book.asin
+          ? `ASIN ${book.asin}`
+          : null,
   ].filter(Boolean);
   const subjects = cleanSubjects(book.subjects, 4);
 
