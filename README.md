@@ -4,7 +4,7 @@
 
 **Tu estante de libros por comprar.** Escanea, guarda, organiza y decide dónde comprarlos.
 
-[Ver la app](https://albertomartinfernandez.com/shelfzero/) · [Licencia MIT](LICENSE)
+[Probar la demostración](https://albertomartinfernandez.com/shelfzerodemo/) · [Licencia MIT](LICENSE)
 
 ![El estante de ShelfZero](docs/estante.png)
 
@@ -22,6 +22,11 @@ te apetece leer, con aspecto de librería.
 
 Está pensada para **una persona por instalación**. Despliegas tu propia copia y tus
 libros son solo tuyos. Funciona íntegramente sobre la **capa gratuita de Cloudflare**.
+
+> **Pruébala sin instalar nada.** Hay una
+> [demostración pública](https://albertomartinfernandez.com/shelfzerodemo/) limitada a
+> 3 libros, que los guarda en tu propio navegador: no toca ninguna base de datos ni
+> comparte nada con otros visitantes.
 
 ## Qué hace
 
@@ -120,9 +125,23 @@ npm run db:migrate:local
 npm run dev
 ```
 
-La app queda en `http://localhost:5173/shelfzero/`.
+La app queda en `http://localhost:5173/myshelfzero/`, y la demostración en
+`http://localhost:5173/shelfzerodemo/`.
 
-### 5. Desplegar
+### 5. Poner una contraseña
+
+El estante privado se protege con una contraseña que se guarda como **secreto de
+Cloudflare**, nunca en el repositorio ni en ningún archivo:
+
+```bash
+npx wrangler secret put APP_PASSWORD
+```
+
+Sin ese secreto la app queda abierta, así que conviene ponerlo antes de guardar
+nada. Para cambiarla, basta con repetir el comando: las sesiones abiertas dejan de
+valer, porque la cookie se deriva de la propia contraseña.
+
+### 6. Desplegar
 
 ```bash
 npm run db:migrate:remote
@@ -131,29 +150,33 @@ npm run deploy
 
 ---
 
-## Servirla en otra ruta
+## Las dos versiones
 
-La app se construye con `/shelfzero` como **base**: assets, API, PWA y enlaces
-compartidos cuelgan de ese prefijo, y el Worker lo recorta antes de enrutar. Si la
-quieres en otra ruta (o en la raíz), cambia la constante `BASE` en **dos** sitios:
+Un mismo build sirve dos rutas, y el Worker las distingue por el prefijo:
 
-- `vite.config.ts` → `const BASE = "/tu-ruta/"` (con barra final)
-- `worker/index.ts` → `const BASE = "/tu-ruta"` (sin barra final)
+| Ruta | Qué es | Datos | Acceso |
+|---|---|---|---|
+| `/myshelfzero` | Tu estante | Cloudflare D1 | Contraseña |
+| `/shelfzerodemo` | Demostración | El navegador de quien prueba | Abierto, 3 libros |
 
-Para servirla en la raíz de un dominio, usa `"/"` y `""` respectivamente.
+La demostración no escribe nada en el servidor: guarda los libros en el
+`localStorage` del visitante, de modo que cada persona tiene su propio estante y
+nadie ve ni puede tocar el de otro. Su API está limitada a las búsquedas.
+
+Los assets se referencian en relativo, así que para cambiar las rutas basta con
+tocar `PRIVATE_BASE` y `DEMO_BASE` en `worker/index.ts` (y `APP_BASE` en
+`vite.config.ts`, que es lo que declara el manifiesto de la PWA).
 
 ## Proteger tu estante
 
-Tras el primer despliegue la URL es pública. Para que solo entres tú:
+La contraseña de `APP_PASSWORD` es suficiente para un uso personal: la sesión se
+guarda en una cookie `HttpOnly` que contiene un HMAC derivado de la contraseña, no
+la contraseña, y las rutas `/s/*` de los enlaces compartidos quedan fuera del
+candado a propósito.
 
-1. En el panel de Cloudflare, ve a **Zero Trust → Access → Applications**.
-2. Crea una aplicación de tipo **Self-hosted** apuntando al dominio de tu Worker.
-3. Añade una política **Allow** con tu correo electrónico.
-4. Deja **fuera** la ruta `/s/*`: es la vista pública de los enlaces que compartes y
-   debe seguir siendo accesible sin identificarse.
-
-Cloudflare Access es gratuito hasta 50 usuarios y no requiere escribir código de
-inicio de sesión.
+Si prefieres delegarlo en tu proveedor de identidad, **Cloudflare Access** (Zero
+Trust) es gratuito hasta 50 usuarios: crea una aplicación *Self-hosted* apuntando a
+`/myshelfzero`, con una política *Allow* para tu correo, y deja fuera `/s/*`.
 
 ## Clave de Google Books (opcional)
 

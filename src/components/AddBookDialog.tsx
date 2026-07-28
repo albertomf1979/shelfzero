@@ -1,7 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { api } from "../api";
+import { api, DemoLimitError, DEMO_LIMIT, IS_DEMO } from "../api";
 import type { BookCandidate, BookList } from "../types";
 import { Cover } from "./Cover";
+import { DemoLimitNotice } from "./DemoBanner";
 import { Sheet } from "./Sheet";
 import { IconBarcode, IconSearch, IconPlus } from "./icons";
 
@@ -370,6 +371,7 @@ function SaveStep({
   const [newListName, setNewListName] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [limitReached, setLimitReached] = useState(false);
 
   function toggle(id: number) {
     setListIds((prev) =>
@@ -399,6 +401,11 @@ function SaveStep({
       });
       onSaved(candidate.title);
     } catch (err: any) {
+      if (err instanceof DemoLimitError) {
+        setLimitReached(true);
+        setSaving(false);
+        return;
+      }
       setError(
         err?.status === 409
           ? "Ese libro ya está en tu estante."
@@ -406,6 +413,10 @@ function SaveStep({
       );
       setSaving(false);
     }
+  }
+
+  if (limitReached) {
+    return <DemoLimitNotice onClose={onCancel} />;
   }
 
   return (

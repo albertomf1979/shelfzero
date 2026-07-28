@@ -5,14 +5,22 @@ import { cloudflare } from "@cloudflare/vite-plugin";
 import { VitePWA } from "vite-plugin-pwa";
 
 /**
- * La app se sirve bajo albertomartinfernandez.com/shelfzero, así que todo
- * (assets, API, PWA y enlaces compartidos) cuelga de ese prefijo. En local
- * ocurre lo mismo para que lo que se prueba sea lo que se despliega.
+ * Un mismo build sirve las dos versiones de la app:
+ *
+ *   /myshelfzero     estante privado, protegido con contraseña
+ *   /shelfzerodemo   demostración pública, limitada a 3 libros
+ *
+ * Por eso los assets se referencian en relativo (`base: "./"`): así resuelven
+ * bajo cualquier prefijo. El prefijo real lo deduce el cliente en tiempo de
+ * ejecución a partir de la URL, y el Worker lo recorta antes de enrutar.
+ *
+ * La PWA solo tiene sentido para la versión privada, que es la que se usa a
+ * diario; la demostración no se registra como aplicación instalable.
  */
-const BASE = "/shelfzero/";
+const APP_BASE = "/myshelfzero/";
 
 export default defineConfig({
-  base: BASE,
+  base: "./",
   plugins: [
     react(),
     tailwindcss(),
@@ -30,9 +38,9 @@ export default defineConfig({
         background_color: "#f4ecdd",
         display: "standalone",
         orientation: "portrait",
-        id: BASE,
-        scope: BASE,
-        start_url: BASE,
+        id: APP_BASE,
+        scope: APP_BASE,
+        start_url: APP_BASE,
         icons: [
           { src: "icon-192.png", sizes: "192x192", type: "image/png" },
           { src: "icon-512.png", sizes: "512x512", type: "image/png" },
@@ -45,20 +53,39 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
-        // Ruta absoluta a propósito: con la relativa que se genera por
-        // defecto, el service worker acabó sirviendo el index.html de la raíz
-        // del dominio —la home del sitio— en lugar del de la app.
-        navigateFallback: `${BASE}index.html`,
-        navigateFallbackDenylist: [/\/api\//],
+        // El HTML se queda fuera del precache a propósito. Workbox resuelve
+        // "/myshelfzero/" contra su index.html precacheado (directoryIndex) y
+        // eso servía la app sin pasar por el servidor, saltándose la
+        // contraseña. Los documentos van siempre por red; sin conexión los
+        // cubre la regla NetworkFirst de abajo.
+        globPatterns: ["**/*.{js,css,svg,png,woff2}"],
+        directoryIndex: null,
+        // Sin navigateFallback a propósito. Con él, el service worker servía
+        // el index.html precacheado ante cualquier navegación y eso se saltaba
+        // la pantalla de contraseña: el servidor decía "identifícate" y el
+        // navegador enseñaba la app igualmente. Las navegaciones pasan ahora
+        // por red (NetworkFirst, abajo) y solo caen a caché si no hay conexión.
+        navigateFallback: undefined,
         // Un service worker viejo no debe sobrevivir a un despliegue.
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,
         runtimeCaching: [
           {
+            // La navegación siempre consulta al servidor: es quien decide si
+            // toca pantalla de acceso o app. La caché es solo la red de
+            // seguridad para cuando no hay conexión.
+            urlPattern: ({ request }) => request.mode === "navigate",
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "shelfzero-shell",
+              networkTimeoutSeconds: 5,
+              expiration: { maxEntries: 10 },
+            },
+          },
+          {
             // El estante ya visto sigue consultable sin conexión.
-            urlPattern: /\/shelfzero\/api\/(books|lists)/,
+            urlPattern: /\/myshelfzero\/api\/(books|lists)/,
             handler: "NetworkFirst",
             options: {
               cacheName: "shelfzero-api",

@@ -1,5 +1,12 @@
 import { Hono } from "hono";
 import {
+  checkPassword,
+  clearCookie,
+  isAuthenticated,
+  loginPage,
+  sessionCookie,
+} from "./auth";
+import {
   lookupByIsbn,
   searchByTitle,
   normalizeIsbn,
@@ -12,14 +19,26 @@ export interface Env {
   DB: D1Database;
   ASSETS: Fetcher;
   GOOGLE_BOOKS_API_KEY?: string;
+  /** Contraseña del estante privado. Se guarda como secreto, nunca en el repo. */
+  APP_PASSWORD?: string;
 }
 
 /**
- * La app se publica bajo albertomartinfernandez.com/shelfzero. El prefijo se
- * recorta antes de que Hono enrute, de modo que las rutas de aquí siguen
- * siendo "/api/…" y los assets se buscan por su ruta real en dist/client.
+ * El mismo Worker sirve dos versiones:
+ *
+ *   /myshelfzero     estante privado, tras contraseña, sobre D1
+ *   /shelfzerodemo   demostración pública; sus datos viven en el navegador,
+ *                    así que aquí solo se permiten las búsquedas
+ *
+ * El prefijo se recorta antes de que Hono enrute, de modo que las rutas de
+ * aquí siguen siendo "/api/…" y los assets se buscan por su ruta real.
  */
-const BASE = "/shelfzero";
+const PRIVATE_BASE = "/myshelfzero";
+const DEMO_BASE = "/shelfzerodemo";
+const BASES = [PRIVATE_BASE, DEMO_BASE];
+
+/** Rutas que la demostración puede usar: solo lectura de catálogos externos. */
+const DEMO_ALLOWED = ["/api/lookup", "/api/search", "/api/health"];
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -438,7 +457,7 @@ app.post("/api/shares", async (c) => {
 
   // Ruta relativa: el Worker no conoce el dominio público desde el que se le
   // reenvía, así que el enlace absoluto lo compone el cliente con su origen.
-  return c.json({ token, path: `${BASE}/s/${token}` });
+  return c.json({ token, path: `${PRIVATE_BASE}/s/${token}` });
 });
 
 /** Contenido público de un enlace compartido (sin autenticación, solo lectura). */
@@ -493,28 +512,90 @@ app.all("*", (c) => c.env.ASSETS.fetch(c.req.raw));
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     const url = new URL(request.url);
+    const base = BASES.find(
+      (b) => url.pathname === b || url.pathname.startsWith(`${b}/`)
+    );
 
-    // /shelfzero -> /shelfzero/ (los assets del manifiesto son relativos).
-    // La cabecera Location va en relativo a propósito: cuando se sirve detrás
-    // del dominio público, una URL absoluta llevaría al usuario al dominio
-    // workers.dev de este Worker.
-    if (url.pathname === BASE) {
+    if (!base) return new Response("Not Found", { status: 404 });
+
+    // "/myshelfzero" -> "/myshelfzero/": los assets se referencian en relativo
+    // y necesitan la barra final. Location va en relativo a propósito: detrás
+    // del dominio público, una URL absoluta llevaría al dominio workers.dev.
+    if (url.pathname === base) {
       return new Response(null, {
         status: 301,
-        headers: { Location: `${BASE}/${url.search}` },
+        headers: { Location: `${base}/${url.search}` },
       });
     }
 
-    if (url.pathname.startsWith(`${BASE}/`)) {
-      // En producción los assets se sirven desde la raíz del directorio, así
-      // que hay que recortar el prefijo. En desarrollo Vite ya los sirve bajo
-      // él, y recortarlo provocaría un bucle de redirección: ahí solo se
-      // recorta para la API, que es lo que Hono necesita enrutar.
-      const isApi = url.pathname.startsWith(`${BASE}/api/`);
-      if (import.meta.env.PROD || isApi) {
-        url.pathname = url.pathname.slice(BASE.length) || "/";
-        request = new Request(url, request);
+    const rest = url.pathname.slice(base.length) || "/";
+    const isDemo = base === DEMO_BASE;
+
+    // --- Demostración: sin datos en el servidor -----------------------------
+    if (isDemo && rest.startsWith("/api/")) {
+      const allowed = DEMO_ALLOWED.some((p) => rest.startsWith(p));
+      if (!allowed) {
+        return Response.json(
+          {
+            error:
+              "La demostración guarda los libros en tu navegador; no usa el servidor.",
+          },
+          { status: 403 }
+        );
       }
+    }
+
+    // --- Estante privado: contraseña ---------------------------------------
+    if (!isDemo) {
+      const password = env.APP_PASSWORD;
+
+      if (rest === "/api/login" && request.method === "POST") {
+        if (!password) {
+          return Response.json({ error: "Sin contraseña configurada" }, { status: 500 });
+        }
+        const form = await request.formData().catch(() => null);
+        const given = String(form?.get("password") ?? "");
+        if (!checkPassword(given, password)) return loginPage(base, true);
+        return new Response(null, {
+          status: 303,
+          headers: {
+            Location: `${base}/`,
+            "Set-Cookie": await sessionCookie(password, base),
+          },
+        });
+      }
+
+      if (rest === "/api/logout") {
+        return new Response(null, {
+          status: 303,
+          headers: { Location: `${base}/`, "Set-Cookie": clearCookie(base) },
+        });
+      }
+
+      // La vista pública de un enlace compartido queda fuera del candado.
+      const isSharedView =
+        rest.startsWith("/s/") || rest.startsWith("/api/shares/");
+
+      if (password && !isSharedView) {
+        const ok = await isAuthenticated(request, password);
+        if (!ok) {
+          if (rest.startsWith("/api/")) {
+            return Response.json({ error: "No autorizado" }, { status: 401 });
+          }
+          // Los assets pueden servirse: sin ellos la pantalla de acceso se ve rota.
+          const isAsset = /\.[a-z0-9]+$/i.test(rest) && !rest.endsWith(".html");
+          if (!isAsset) return loginPage(base);
+        }
+      }
+    }
+
+    // En producción los assets se sirven desde la raíz del directorio, así que
+    // hay que recortar el prefijo. En desarrollo Vite ya los sirve bajo él, y
+    // recortarlo provocaría un bucle de redirección: ahí solo se recorta para
+    // la API, que es lo que Hono necesita enrutar.
+    if (import.meta.env.PROD || rest.startsWith("/api/")) {
+      url.pathname = rest;
+      request = new Request(url, request);
     }
 
     return app.fetch(request, env, ctx);

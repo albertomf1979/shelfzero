@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, BASE } from "./api";
+import { api, BASE, IS_DEMO } from "./api";
 import type { Book, BookList, SortMode, ViewMode } from "./types";
 import { AddBookDialog, type AddMode } from "./components/AddBookDialog";
 import { BookDetail } from "./components/BookDetail";
 import { BookMenu } from "./components/BookMenu";
 import { ConfirmDialog } from "./components/ConfirmDialog";
+import { DemoBanner } from "./components/DemoBanner";
 import { Home } from "./components/Home";
 import { PromptDialog } from "./components/PromptDialog";
 import { Shelf } from "./components/Shelf";
@@ -253,6 +254,8 @@ function Shelves() {
         </div>
       </header>
 
+      {IS_DEMO && <DemoBanner used={books.length} />}
+
       {/* Portada: resumen destacado antes de entrar al estante */}
       {screen === "home" && !loading && (
         <Home
@@ -451,8 +454,10 @@ function Shelves() {
         onToggleBought={toggleBought}
         onDelete={setToDelete}
         onToggleList={toggleList}
-        onShare={(b) =>
-          setShare({ kind: "book", refId: b.id, label: b.title })
+        onShare={
+          IS_DEMO
+            ? undefined
+            : (b) => setShare({ kind: "book", refId: b.id, label: b.title })
         }
       />
       <ShareSheet target={share} onClose={() => setShare(null)} />
@@ -462,7 +467,11 @@ function Shelves() {
         onClose={() => setMenuBook(null)}
         onOpenDetail={setDetail}
         onToggleBought={toggleBought}
-        onShare={(b) => setShare({ kind: "book", refId: b.id, label: b.title })}
+        onShare={
+          IS_DEMO
+            ? undefined
+            : (b) => setShare({ kind: "book", refId: b.id, label: b.title })
+        }
         onDelete={setToDelete}
       />
 

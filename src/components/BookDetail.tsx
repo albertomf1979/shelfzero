@@ -12,7 +12,8 @@ type Props = {
   onToggleBought: (book: Book) => void;
   onDelete: (book: Book) => void;
   onToggleList: (book: Book, listId: number, add: boolean) => void;
-  onShare: (book: Book) => void;
+  /** Ausente en la demostración: no hay estado en el servidor que compartir. */
+  onShare?: (book: Book) => void;
 };
 
 export function BookDetail({
@@ -188,12 +189,14 @@ export function BookDetail({
                 ? "Marcar como pendiente"
                 : "Marcar como comprado"}
             </button>
-            <button
-              onClick={() => onShare(book)}
-              className="rounded-full border border-ink/20 px-5 py-2.5 text-body font-medium text-ink transition hover:bg-ink/5"
-            >
-              Compartir
-            </button>
+            {onShare && (
+              <button
+                onClick={() => onShare(book)}
+                className="rounded-full border border-ink/20 px-5 py-2.5 text-body font-medium text-ink transition hover:bg-ink/5"
+              >
+                Compartir
+              </button>
+            )}
             <button
               onClick={() => onDelete(book)}
               className="ml-auto rounded-full px-4 py-2.5 text-body font-medium text-ink-faint transition hover:bg-danger/10 hover:text-danger"

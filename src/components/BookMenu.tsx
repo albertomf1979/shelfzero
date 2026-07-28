@@ -7,7 +7,7 @@ type Props = {
   onClose: () => void;
   onOpenDetail: (book: Book) => void;
   onToggleBought: (book: Book) => void;
-  onShare: (book: Book) => void;
+  onShare?: (book: Book) => void;
   onDelete: (book: Book) => void;
 };
 
@@ -65,15 +65,17 @@ export function BookMenu({
           >
             {bought ? "Devolver a deseados" : "Marcar como comprado"}
           </button>
-          <button
-            onClick={() => {
-              onShare(book);
-              onClose();
-            }}
-            className="flex min-h-12 items-center rounded-lg px-3 text-left text-body text-ink transition hover:bg-paper-2"
-          >
-            Compartir
-          </button>
+          {onShare && (
+            <button
+              onClick={() => {
+                onShare(book);
+                onClose();
+              }}
+              className="flex min-h-12 items-center rounded-lg px-3 text-left text-body text-ink transition hover:bg-paper-2"
+            >
+              Compartir
+            </button>
+          )}
 
           <div className="my-2 h-px bg-rule/50" />
 
