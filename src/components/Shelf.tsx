@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Book, SortMode, ViewMode } from "../types";
+import { formatDateShort, isoDate } from "../lib/dates";
 import { cleanSubjects } from "../lib/subjects";
 import { Cover } from "./Cover";
 import { IconChevronDown, IconMore } from "./icons";
@@ -317,6 +318,13 @@ function ListView({
                   </p>
                   <p className="line-clamp-1 text-meta text-ink-faint">
                     {[b.authors[0], b.publishedYear].filter(Boolean).join(" · ")}
+                  </p>
+                  {/* Fecha de ingreso al estante y quién lo recomendó */}
+                  <p className="line-clamp-1 text-meta text-ink-faint">
+                    <time dateTime={isoDate(b.createdAt)}>
+                      Añadido el {formatDateShort(b.createdAt)}
+                    </time>
+                    {b.recommendedBy && <> · Por {b.recommendedBy}</>}
                   </p>
                 </div>
 

@@ -82,7 +82,7 @@ export function BookMenu({
               onDelete(book);
               onClose();
             }}
-            className="flex min-h-12 items-center rounded-lg px-3 text-left text-body font-medium text-spine transition hover:bg-spine/10"
+            className="flex min-h-12 items-center rounded-lg px-3 text-left text-body font-medium text-danger transition hover:bg-danger/10"
           >
             Quitar del estante
           </button>

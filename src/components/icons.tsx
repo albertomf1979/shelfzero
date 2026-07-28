@@ -94,6 +94,26 @@ export const IconSun = (p: IconProps) => (
   </Icon>
 );
 
+/** Marca: un libro abierto, a trazo. Sustituye al monograma "S0". */
+export const IconBook = ({ className = "size-6" }: IconProps) => (
+  <svg
+    viewBox="0 0 24 24"
+    className={className}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    {/* lomo */}
+    <path d="M12 6.5v13" />
+    {/* tapas */}
+    <path d="M12 6.5C10.4 5.2 8.3 4.5 5.5 4.5H3v13h2.5c2.8 0 4.9.7 6.5 2" />
+    <path d="M12 6.5c1.6-1.3 3.7-2 6.5-2H21v13h-2.5c-2.8 0-4.9.7-6.5 2" />
+  </svg>
+);
+
 export const IconShare = (p: IconProps) => (
   <Icon {...p}>
     <path d="M12 16V4M8 8l4-4 4 4" />

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "./api";
 import type { Book, BookList, SortMode, ViewMode } from "./types";
-import { AddBookDialog } from "./components/AddBookDialog";
+import { AddBookDialog, type AddMode } from "./components/AddBookDialog";
 import { BookDetail } from "./components/BookDetail";
 import { BookMenu } from "./components/BookMenu";
 import { ConfirmDialog } from "./components/ConfirmDialog";
@@ -14,6 +14,7 @@ import { useToast } from "./components/Toast";
 import { Welcome } from "./components/Welcome";
 import {
   IconBarcode,
+  IconBook,
   IconGrid,
   IconList,
   IconMore,
@@ -51,7 +52,7 @@ function Shelves() {
   const [activeList, setActiveList] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
-  const [addMode, setAddMode] = useState<"scan" | "search" | "isbn">("search");
+  const [addMode, setAddMode] = useState<AddMode>("choose");
   const [detail, setDetail] = useState<Book | null>(null);
   const [showWelcome, setShowWelcome] = useState(
     () => localStorage.getItem("sz.seen") !== "1"
@@ -132,8 +133,32 @@ function Shelves() {
     load();
   }
 
+  /** Crear lista sin salir del alta (punto 7); devuelve la lista para seleccionarla. */
+  async function createListInline(name: string): Promise<BookList | null> {
+    try {
+      const { list } = await api.addList(name);
+      setLists((prev) => [...prev, list]);
+      return list;
+    } catch {
+      toast("No se ha podido crear la lista");
+      return null;
+    }
+  }
+
+  /** El logotipo devuelve siempre al estante completo, cierre lo que haya abierto. */
+  function goHome() {
+    setActiveList(null);
+    setDetail(null);
+    setMenuBook(null);
+    setAddOpen(false);
+    setShare(null);
+    setSettingsOpen(false);
+    setAboutOpen(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   /** Abre el diálogo de alta directamente en el modo pedido (FR: captura rápida). */
-  function openAdd(mode: "scan" | "search" | "isbn") {
+  function openAdd(mode: AddMode) {
     setAddMode(mode);
     setAddOpen(true);
   }
@@ -161,15 +186,14 @@ function Shelves() {
       {/* Cabecera */}
       <header className="sticky top-0 z-30 border-b border-ink/10 bg-paper/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6">
+          {/* Vuelve siempre al estante completo, cierre lo que haya abierto */}
           <button
-            onClick={() => {
-              setActiveList(null);
-              setDetail(null);
-            }}
+            onClick={goHome}
+            aria-label="Ir al estante"
             className="flex items-center gap-2.5"
           >
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-spine font-display text-lg text-paper">
-              S0
+            <span className="flex size-9 items-center justify-center rounded-lg bg-spine text-paper">
+              <IconBook className="size-5" />
             </span>
             <span className="font-display text-xl">ShelfZero</span>
           </button>
@@ -179,7 +203,7 @@ function Shelves() {
           </span>
 
           <button
-            onClick={() => openAdd("search")}
+            onClick={() => openAdd("choose")}
             className="ml-auto inline-flex min-h-11 items-center gap-1.5 rounded-full bg-spine px-5 text-body font-medium text-paper shadow-raise transition hover:bg-spine-dark active:scale-95"
           >
             <IconPlus className="size-4" />
@@ -293,7 +317,7 @@ function Shelves() {
         ) : books.length === 0 ? (
           <EmptyState
             onScan={() => openAdd("scan")}
-            onSearch={() => openAdd("search")}
+            onSearch={() => openAdd("choose")}
             onClearFilter={() => setActiveList(null)}
             filtered={activeList !== null}
           />
@@ -324,6 +348,8 @@ function Shelves() {
       <AddBookDialog
         open={addOpen}
         initialMode={addMode}
+        lists={lists}
+        onCreateList={createListInline}
         onClose={() => setAddOpen(false)}
         onAdded={(title) => {
           toast(`«${title}» guardado en el estante`);

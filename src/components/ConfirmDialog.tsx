@@ -38,7 +38,7 @@ export function ConfirmDialog({
               "inline-flex min-h-11 items-center justify-center rounded-full px-5 text-body " +
               "font-medium text-paper shadow-raise transition active:scale-[0.97] " +
               "disabled:bg-ink/25 disabled:shadow-none " +
-              (tone === "danger" ? "bg-spine hover:bg-spine-dark" : "bg-ink hover:bg-ink/90")
+              (tone === "danger" ? "bg-danger hover:bg-danger-strong" : "bg-ink hover:bg-ink/90")
             }>
             {confirmLabel}
           </button>

@@ -15,6 +15,8 @@ export type BookData = {
   source?: "google" | "openlibrary" | "manual";
   /** Clave de obra de Open Library (/works/OL…W), para ampliar datos al guardar. */
   workKey?: string;
+  /** Quién recomendó el libro. Opcional, lo escribe el usuario. */
+  recommendedBy?: string;
 };
 
 const FETCH_TIMEOUT = 8000;

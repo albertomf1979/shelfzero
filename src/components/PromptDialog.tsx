@@ -58,7 +58,7 @@ export function PromptDialog({
         />
         <div className="mt-1 flex justify-between">
           {error
-            ? <p id="prompt-error" role="alert" className="text-meta text-spine">{error}</p>
+            ? <p id="prompt-error" role="alert" className="text-meta text-danger">{error}</p>
             : <span />}
           <span id="prompt-count" className="text-micro tabular-nums text-ink-faint">
             {value.length}/{maxLength}

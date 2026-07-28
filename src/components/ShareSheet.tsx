@@ -113,7 +113,7 @@ export function ShareSheet({ target, onClose }: Props) {
         <p className="mb-5 text-body text-ink-soft">{target.label}</p>
 
         {error && (
-          <p className="mb-4 rounded-lg bg-spine/10 p-3 text-body text-spine">
+          <p className="mb-4 rounded-lg bg-danger/10 p-3 text-body text-danger">
             {error}
           </p>
         )}

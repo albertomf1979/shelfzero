@@ -42,6 +42,7 @@ function rowToBook(row: any) {
     publishedYear: row.published_year as number | null,
     language: row.language as string | null,
     status: row.status as "wishlist" | "bought",
+    recommendedBy: row.recommended_by as string | null,
     source: row.source as string | null,
     createdAt: row.created_at as number,
     updatedAt: row.updated_at as number,
@@ -206,8 +207,9 @@ app.post("/api/books", async (c) => {
   const result = await c.env.DB.prepare(
     `INSERT INTO books
       (isbn13, isbn10, title, authors, subjects, description, cover_url,
-       publisher, published_year, language, status, source, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'wishlist', ?, ?, ?)`
+       publisher, published_year, language, status, source, recommended_by,
+       created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'wishlist', ?, ?, ?, ?)`
   )
     .bind(
       isbn13,
@@ -221,6 +223,7 @@ app.post("/api/books", async (c) => {
       body.publishedYear ?? null,
       body.language ?? null,
       body.source ?? "manual",
+      body.recommendedBy?.trim() || null,
       now,
       now
     )
@@ -262,6 +265,7 @@ app.patch("/api/books/:id", async (c) => {
     status: "status",
     isbn13: "isbn13",
     isbn10: "isbn10",
+    recommendedBy: "recommended_by",
   };
 
   const sets: string[] = [];

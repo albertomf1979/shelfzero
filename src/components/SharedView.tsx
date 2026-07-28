@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api, googleBuyUrl } from "../api";
 import type { Book } from "../types";
 import { Cover } from "./Cover";
+import { IconBook } from "./icons";
 
 /**
  * Vista pública de un enlace compartido (/s/:token).
@@ -161,8 +162,8 @@ function Frame({ children }: { children: React.ReactNode }) {
     <div className="min-h-[100dvh]">
       <header className="border-b border-rule/50">
         <div className="mx-auto flex max-w-3xl items-center gap-2.5 px-4 py-3 sm:px-6">
-          <span className="flex size-9 items-center justify-center rounded-lg bg-spine font-display text-lg text-paper">
-            S0
+          <span className="flex size-9 items-center justify-center rounded-lg bg-spine text-paper">
+            <IconBook className="size-5" />
           </span>
           <span className="font-display text-xl">ShelfZero</span>
         </div>

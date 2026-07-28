@@ -1,3 +1,4 @@
+import { IconBook } from "./icons";
 import { Sheet } from "./Sheet";
 
 type Props =
@@ -12,7 +13,7 @@ export function Welcome(props: Props) {
   const body = (
     <>
       <div className="mx-auto mb-8 flex size-20 items-center justify-center rounded-2xl bg-spine text-paper shadow-raise">
-        <span className="font-display text-4xl leading-none">S0</span>
+        <IconBook className="size-11" />
       </div>
 
       <p className="mb-3 text-micro uppercase text-ink-faint">

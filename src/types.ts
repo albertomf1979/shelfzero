@@ -11,6 +11,7 @@ export type Book = {
   publishedYear: number | null;
   language: string | null;
   status: "wishlist" | "bought";
+  recommendedBy: string | null;
   source: string | null;
   createdAt: number;
   updatedAt: number;
@@ -32,6 +33,8 @@ export type BookCandidate = {
   source?: string;
   /** Clave de obra de Open Library; el servidor la usa para traer el resumen. */
   workKey?: string;
+  /** Quién lo recomendó. Opcional. */
+  recommendedBy?: string;
 };
 
 export type BookList = {

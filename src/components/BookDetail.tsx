@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import type { Book, BookList } from "../types";
 import { googleBuyUrl } from "../api";
+import { formatDate, isoDate } from "../lib/dates";
 import { cleanSubjects } from "../lib/subjects";
 import { Cover } from "./Cover";
 
@@ -99,6 +100,19 @@ export function BookDetail({
                 <p className="mt-3 text-body text-ink-faint">{meta.join(" · ")}</p>
               )}
 
+              {/* Cuándo entró al estante y quién lo recomendó */}
+              <p className="mt-1.5 text-meta text-ink-faint">
+                <time dateTime={isoDate(book.createdAt)}>
+                  Añadido el {formatDate(book.createdAt)}
+                </time>
+              </p>
+              {book.recommendedBy && (
+                <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-paper-3 px-3 py-1 text-meta text-ink-soft">
+                  Recomendación de{" "}
+                  <strong className="font-medium">{book.recommendedBy}</strong>
+                </p>
+              )}
+
               {/* Temáticas limpias: sin ruido de catálogo y en español si se conoce */}
               {subjects.length > 0 && (
                 <div className="mt-4 flex flex-wrap gap-1.5">
@@ -182,7 +196,7 @@ export function BookDetail({
             </button>
             <button
               onClick={() => onDelete(book)}
-              className="ml-auto rounded-full px-4 py-2.5 text-body font-medium text-ink-faint transition hover:bg-spine/10 hover:text-spine"
+              className="ml-auto rounded-full px-4 py-2.5 text-body font-medium text-ink-faint transition hover:bg-danger/10 hover:text-danger"
             >
               Eliminar
             </button>

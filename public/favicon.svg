@@ -1,5 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <rect width="512" height="512" rx="96" fill="#9a3b32"/>
-  <text x="256" y="345" font-family="'Times New Roman', Times, serif"
-        font-size="260" fill="#f4ecdd" text-anchor="middle">S0</text>
+  <g fill="none" stroke="#f9f6ef" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M256 158v212"/>
+    <path d="M256 158c-31-25-72-38-127-38h-49v212h49c55 0 96 13 127 38"/>
+    <path d="M256 158c31-25 72-38 127-38h49v212h-49c-55 0-96 13-127 38"/>
+  </g>
 </svg>

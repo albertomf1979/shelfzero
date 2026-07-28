@@ -6,10 +6,10 @@
 
 @theme {
   /* ---- papel ---- */
-  --color-paper: #f4ecdd;
-  --color-paper-2: #eee2cd;
-  --color-paper-3: #e6d7bd;
-  --color-paper-raise: #faf5ea;
+  --color-paper: #f9f6ef;
+  --color-paper-2: #f1ece1;
+  --color-paper-3: #e7e0d1;
+  --color-paper-raise: #fffdf8;
 
   /* ---- tinta ---- */
   --color-ink: #2a2521;
@@ -19,8 +19,12 @@
   /* ---- marca y madera ---- */
   --color-spine: #9a3b32;
   --color-spine-dark: #7c2d26;
+  /* Destructivo: separado de la marca porque en oscuro el botón de marca
+     pasa a blanco y el rojo debe seguir significando peligro. */
+  --color-danger: #9a3b32;
+  --color-danger-strong: #7c2d26;
   --color-gold: #a07c3c;
-  --color-gold-deep: #8a6224;
+  --color-gold-deep: #7a561e;
   --color-wood: #7a5a3a;
   --color-wood-dark: #5f452c;
 
@@ -81,8 +85,10 @@ html.dark {
   --color-ink-soft: #cbbca6;   /* 9.82:1 */
   --color-ink-faint: #a3947f;  /* 6.18:1 / 5.27:1 sobre paper-3 */
 
-  --color-spine: #d06253;      /* 4.83:1 sobre paper; texto encima: #191411 (4.83:1) */
-  --color-spine-dark: #dd7566; /* hover = más claro en oscuro (5.93:1) */
+  --color-spine: #f2ece1;      /* botón blanco en oscuro; texto encima: paper (15.54:1) */
+  --color-spine-dark: #ded4c4; /* hover del botón blanco (12.46:1) */
+  --color-danger: #e08175;     /* 6.58:1 — el rojo sigue siendo el rojo */
+  --color-danger-strong: #ea9084;
   --color-gold: #c99a55;       /* 7.17:1 */
   --color-gold-deep: #d0a260;  /* 7.85:1 — el dorado de texto también invierte */
   --color-wood: #4a3524;
