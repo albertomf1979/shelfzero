@@ -134,10 +134,16 @@ h1, h2, h3 {
   text-wrap: balance;
 }
 
-/* Títulos y textos largos: evitar líneas huérfanas y palabras partidas. */
-p { text-wrap: pretty; }
-
 @layer base {
+  /* Títulos y textos largos: evitar líneas huérfanas y palabras partidas.
+
+     Va dentro de @layer base a propósito. Suelta, ganaba a las utilidades de
+     Tailwind, y como `text-wrap` y `white-space` comparten la misma propiedad
+     interna (`text-wrap-mode`), le quitaba el `nowrap` a `.truncate`: la
+     elipsis no llegaba a aparecer nunca y el texto envolvía en varias líneas.
+     También anulaba `text-balance` en los párrafos que lo pedían. */
+  p { text-wrap: pretty; }
+
   /* ---- CURSOR ----
      Tailwind v4 no fuerza `pointer` en los botones, así que salía la
      flecha en todo lo pulsable. Se declara una vez para toda la app. */
@@ -167,6 +173,38 @@ p { text-wrap: pretty; }
 
   /* Nada de scroll encadenado desde los diálogos. */
   [data-sheet] { overscroll-behavior: contain; }
+}
+
+/* ---- CUBIERTAS MINÚSCULAS ----
+   La vista en lista dibuja la portada a 40px. A ese tamaño el título saldría
+   a 3px: manchas, no letras. Por debajo del umbral la cubierta se queda solo
+   con su color y el filete, que es lo único que de verdad se distingue.
+   El aria-label del contenedor sigue anunciando el título, así que no se
+   pierde información para quien usa lector de pantalla. */
+@container (max-width: 55px) {
+  [data-cover] > p {
+    display: none;
+  }
+}
+
+/* ---- ZOOM AL ESCRIBIR EN MÓVIL ----
+   iOS Safari amplía la página entera al enfocar un campo cuya letra mide
+   menos de 16px, y al salir la deja ampliada y descuadrada: hay que
+   recolocarla con el dedo. Con 16px justos no se dispara.
+
+   Va deliberadamente fuera de @layer: el CSS sin capa gana a las utilidades
+   de Tailwind (`text-body`, 15px) sin necesidad de !important. Y solo en
+   pantallas táctiles, para no engordar los campos en escritorio.
+
+   Lo que NO se hace: poner `maximum-scale=1` en el viewport. Eso también
+   evitaría el salto, pero de paso impediría ampliar a quien lo necesita
+   para leer, y eso incumple la WCAG 1.4.4. */
+@media (pointer: coarse) {
+  input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
 }
 
 /* ---- movimiento propio, sin librerías (6.12) ---- */
