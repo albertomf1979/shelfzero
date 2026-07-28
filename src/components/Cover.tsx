@@ -15,11 +15,17 @@ function spineColor(seed: string): string {
   return SPINES[Math.abs(hash) % SPINES.length];
 }
 
-/** El título manda el tamaño: cuanto más largo, más pequeño. */
+/**
+ * El título manda el tamaño: cuanto más largo, más pequeño. Pero la medida es
+ * relativa al ancho de la propia cubierta (`cqw`), porque la misma portada se
+ * dibuja a 90px en la portada y a 190px en la ficha: con tamaños fijos, en las
+ * pequeñas el texto se salía de la caja y pisaba al autor. El `min()` mantiene
+ * intacto el tamaño de siempre en las grandes y solo encoge en las estrechas.
+ */
 function titleSize(title: string): string {
-  if (title.length <= 18) return "text-base";
-  if (title.length <= 40) return "text-meta";
-  return "text-[0.6875rem]";
+  if (title.length <= 18) return "text-[min(16cqw,1rem)]";
+  if (title.length <= 40) return "text-[min(13cqw,0.8125rem)]";
+  return "text-[min(10.5cqw,0.6875rem)]";
 }
 
 type Props = {
@@ -57,7 +63,8 @@ export function Cover({
   const bg = spineColor(title);
   return (
     <div
-      className={`relative flex flex-col justify-between overflow-hidden p-2 text-paper ${className}`}
+      data-cover=""
+      className={`@container relative flex flex-col justify-between overflow-hidden p-2 text-paper ${className}`}
       style={{
         backgroundColor: bg,
         backgroundImage:
@@ -72,14 +79,14 @@ export function Cover({
       </div>
 
       <p
-        className={`line-clamp-4 px-1 text-center font-display font-medium leading-tight text-balance [text-shadow:0_1px_0_rgb(0_0_0/0.25)] ${titleSize(
+        className={`line-clamp-4 hyphens-auto break-words px-1 text-center font-display font-medium leading-tight text-balance [text-shadow:0_1px_0_rgb(0_0_0/0.25)] ${titleSize(
           title
         )}`}
       >
         {title}
       </p>
 
-      <p className="truncate px-1 text-center text-[0.625rem] uppercase tracking-[0.12em] text-paper/85">
+      <p className="truncate px-1 text-center text-[min(8cqw,0.625rem)] uppercase tracking-[0.12em] text-paper/85">
         {authors?.[0] ?? "Autor desconocido"}
       </p>
 

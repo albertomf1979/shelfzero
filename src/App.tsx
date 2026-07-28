@@ -236,12 +236,16 @@ function Shelves() {
             </span>
           )}
 
+          {/* Por debajo de 360px la fila entera (marca + Añadir + Ajustes) no
+              cabía y empujaba la página 4px: bastaba para poder arrastrarla en
+              horizontal. Ahí el botón se queda solo con el icono. */}
           <button
             onClick={() => openAdd("choose")}
-            className="ml-auto inline-flex min-h-11 items-center gap-1.5 rounded-full bg-spine px-5 text-body font-medium text-paper shadow-raise transition hover:bg-spine-dark active:scale-95"
+            aria-label="Añadir un libro"
+            className="ml-auto inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-full bg-spine px-5 text-body font-medium text-paper shadow-raise transition hover:bg-spine-dark active:scale-95 max-[359px]:size-11 max-[359px]:px-0"
           >
             <IconPlus className="size-4" />
-            Añadir
+            <span className="max-[359px]:hidden">Añadir</span>
           </button>
 
           <button

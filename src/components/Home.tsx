@@ -29,7 +29,10 @@ export function Home({ books, onOpenShelf, onOpenBook, onScan, onAdd }: Props) {
   return (
     <section className="mx-auto max-w-6xl px-4 pb-4 pt-8 sm:px-6 sm:pt-12">
       <div className="overflow-hidden rounded-2xl border border-rule/50 bg-paper-raise shadow-raise">
-        <div className="grid gap-8 p-6 sm:p-8 md:grid-cols-[1fr_auto] md:items-end md:gap-12">
+        {/* `grid-cols-1` no es decorativo: sin él la única columna de móvil se
+            dimensiona a max-content, crece más que la tarjeta y el recorte de
+            `overflow-hidden` se comía media frase y los dos botones. */}
+        <div className="grid grid-cols-1 gap-8 p-6 sm:p-8 md:grid-cols-[1fr_auto] md:items-end md:gap-12">
           {/* Recuento y llamada a la acción */}
           <div className="min-w-0">
             <p className="text-micro uppercase text-ink-faint">
